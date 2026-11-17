@@ -18,6 +18,9 @@
         </include>
     </source>
     <php>
+        <!-- Never load prod caches (would point tests at the prod DB / real API key). -->
+        <env name="APP_CONFIG_CACHE" value="bootstrap/cache/config.testing.php" force="true"/>
+        <env name="APP_ROUTES_CACHE" value="bootstrap/cache/routes.testing.php" force="true"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

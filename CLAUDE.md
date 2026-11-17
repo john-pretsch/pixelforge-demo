@@ -16,7 +16,7 @@ Laravel 12 (PHP 8.4), the Vue 3 + Inertia + TypeScript starter kit (includes aut
 
 ```bash
 composer dev                     # local: server + queue + vite
-php artisan test                 # all tests
+php artisan test                 # all tests (phpunit.xml bypasses the prod config cache; keep that)
 php artisan test --filter=Webhook
 npm run build                    # production assets
 php artisan queue:work --tries=0 # worker (jobs control their own retries)
