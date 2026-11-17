@@ -74,16 +74,19 @@ php artisan schedule:run         # run by cron in prod
 ```
 app/
   Enums/GenerationStatus.php           # statuses + rank(), isTerminal()
-  Models/Generation.php                # local row; money columns cast to string/BigDecimal
+  Models/Generation.php                # local row; money columns are exact decimal strings
   Models/WebhookEvent.php              # processed event ids (dedupe)
   Pixelforge/
     PixelforgeClient.php               # the ONLY place that talks HTTP to Pixelforge
     PixelforgeException.php            # code, http status, retryAfter, isRetryable()
     WebhookSignature.php               # pure verify(header, rawBody, secret, now)
-  Pricing/
+  Pricing/                             # pure money math: no DB, no HTTP (plain PHPUnit tests)
     Rates.php                          # value object (from /v1/pricing or locked generation rates)
-    CostCalculator.php                 # usage + rates -> provider cost; withMarkup()
-    CostEstimator.php                  # prompt/size/quality/refs -> [low, high]
+    TokenUsage.php                     # value object for a generation's `usage`
+    PricingTable.php                   # parsed /v1/pricing: rates + token constants, sizes, qualities
+    CostCalculator.php                 # providerCost(usage, rates); price(cost, markup)
+    CostEstimator.php                  # prompt/size/quality/refs -> Estimate
+    Estimate.php                       # min/max tokens, provider cost and price; display range
     Money.php                          # BigDecimal helpers + display formatting
   Actions/Generations/
     CreateGeneration.php               # validate -> estimate -> insert pending -> dispatch

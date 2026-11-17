@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 /**
  * Money columns come back from Postgres as exact decimal strings and are kept
@@ -45,6 +46,25 @@ class Generation extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Find the local row for a Pixelforge generation object: by provider id,
+     * or by metadata.local_id when the webhook beat the create response.
+     *
+     * @param  array<string, mixed>  $remote
+     */
+    public static function forProviderPayload(array $remote): ?self
+    {
+        if (is_string($remote['id'] ?? null) && ($found = self::where('provider_id', $remote['id'])->first())) {
+            return $found;
+        }
+
+        $localId = $remote['metadata']['local_id'] ?? null;
+
+        return is_string($localId) && Str::isUuid($localId)
+            ? self::where('uuid', $localId)->first()
+            : null;
     }
 
     /** @param Builder<self> $query */
