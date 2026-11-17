@@ -12,7 +12,7 @@ Stretch goals (credit balances and an admin profit report) are **designed in but
 
 ## Stack and commands
 
-Laravel 12 (PHP 8.4), the Vue 3 + Inertia + TypeScript starter kit (includes auth), Postgres, the database queue driver, and Pest/PHPUnit.
+Laravel 12 (PHP 8.4), the Vue 3 + Inertia + TypeScript starter kit (includes auth), Postgres, the database queue driver, and PHPUnit (class-style tests, as in the starter kit). Tests run against a real Postgres database, `pixelforge_test`, so NUMERIC, unique constraints and row locks behave as in prod. Shared Pixelforge payload fixtures live in `tests/Support/PixelforgeFixtures.php`.
 
 ```bash
 composer dev                     # local: server + queue + vite
