@@ -176,8 +176,9 @@ Every money and state rule has a test. Use `Http::fake()` for Pixelforge and nev
 ## Deployment (this server)
 
 - nginx vhost for `pixelforge-demo.johnpretsch.com` → `public/`, with a certbot TLS certificate. PHP runs through php8.4-fpm.
-- Queue worker: a systemd unit running `php artisan queue:work` (supervisor isn't installed).
-- Scheduler: a cron entry `* * * * * php artisan schedule:run`.
+- Queue worker: the systemd unit `pixelforge-worker` (`deploy/pixelforge-worker.service`) runs `queue:work --tries=0` as `www-data`; supervisor isn't installed. After deploying code, run `systemctl restart pixelforge-worker`.
+- Scheduler: a line in `www-data`'s crontab (`deploy/crontab`) runs `schedule:run` every minute. That crontab is shared with another site, so append to it and never replace it.
+- Config is cached (`php artisan optimize`), so after any `.env` change run `sudo -u www-data php artisan config:cache`.
 - Prod uses its own Pixelforge key, with the webhook URL `https://pixelforge-demo.johnpretsch.com/webhooks/pixelforge`.
 - Leave several generations in prod for reviewers, including a succeeded one, a failed one, and one from a `[duplicate]` prompt.
 - Reference configs live in `deploy/`.

@@ -1,0 +1,22 @@
+# /etc/systemd/system/pixelforge-worker.service
+# Queue worker for pixelforge-demo.johnpretsch.com.
+# --tries=0: SubmitGeneration controls its own attempts (release + MAX_ATTEMPTS).
+# --max-time recycles the process hourly so code/config changes are picked up;
+# after a deploy run: systemctl restart pixelforge-worker (or php artisan queue:restart).
+[Unit]
+Description=Pixelforge queue worker
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/pixelforge-demo.johnpretsch.com
+ExecStart=/usr/bin/php artisan queue:work database --tries=0 --sleep=1 --timeout=60 --max-time=3600
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

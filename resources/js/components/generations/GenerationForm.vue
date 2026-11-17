@@ -96,7 +96,7 @@ const selectClass =
                 rows="4"
                 required
                 :maxlength="MAX_PROMPT"
-                placeholder="A lighthouse on a cliff at dusk, watercolor"
+                placeholder="Describe, in detail, the image you wish to generate"
                 class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
             />
             <InputError :message="form.errors.prompt" />

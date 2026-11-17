@@ -1,0 +1,2 @@
+# Appended to www-data's crontab (crontab -u www-data -e); runs pixelforge:reconcile every minute.
+* * * * * cd /var/www/pixelforge-demo.johnpretsch.com && php artisan schedule:run >> /dev/null 2>&1
