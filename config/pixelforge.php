@@ -18,7 +18,7 @@ return [
 
     // How long /v1/pricing is cached for estimates (seconds).
     // claude picked this value. probably ok?
-    'pricing_cache_ttl' => 600, //10 minutes
+    'pricing_cache_ttl' => 600, // 10 minutes
 
     // HTTP client timeouts (seconds).
     'timeout' => 15,
