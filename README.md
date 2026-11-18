@@ -10,7 +10,7 @@ This was generated using Claude Code / Opus 5.5. The API docs and Assessment doc
 https://pixelforge.promptedit.dev/assessment
 https://pixelforge.promptedit.dev/docs
 
-The code was generated using both planning mode, manual mode and automatic mode. Git diff was used to view the generated addions and changes. This allowed some granularity in the commit history.
+The code was generated using both planning mode, manual mode and automatic mode. Git diff was used to view the generated addions and changes. This allowed some granularity in the commit history. Normally I would squash some of the commits before pushing, but in this case I'll leave them as is for transparency.
 
 ## Now What?
 
@@ -34,3 +34,7 @@ This is an area where both human and AI agents often slip up. npm audit found ma
 ```bash
     npm audit fix #fix 
 ```
+
+### Integration testing
+
+During the initial build, Claude create a suite of unit test which all passed. This is a tautological loop which is an inherit problem with unit testing whether human or ai generation. 

@@ -137,7 +137,7 @@ const selectClass =
             <InputError v-for="(msg, i) in refErrors" :key="i" :message="msg" />
         </div>
 
-        <div class="rounded-lg border bg-muted/40 p-4">
+        <div class="rounded-lg border bg-muted/40 p-4" data-testid="estimate">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <div class="text-sm text-muted-foreground">Estimated cost</div>

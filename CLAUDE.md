@@ -19,6 +19,8 @@ composer dev                     # local: server + queue + vite
 php artisan test                 # all tests (phpunit.xml bypasses the prod config cache; keep that)
 composer analyse                 # Larastan/PHPStan level 6 (phpstan.neon); must stay at 0 errors, no baseline
 npm run lint:check               # ESLint report only (npm run lint auto-fixes)
+composer test:integration        # opt-in: live Pixelforge API (dev key), ~1-2 min, ~$0.03
+npm run build && npm run test:e2e  # opt-in: Playwright browser E2E on an isolated stack (:8001)
 php artisan test --filter=Webhook
 npm run build                    # production assets
 php artisan queue:work --tries=0 # worker (jobs control their own retries)
@@ -163,6 +165,16 @@ QUEUE_CONNECTION=database
 `.env` is never committed. Local webhooks need a public tunnel, because Pixelforge rejects private and loopback URLs.
 
 ## Testing expectations
+
+**Suites.** `php artisan test` runs Unit and Feature: Pixelforge is always faked there. Two opt-in suites hit the **real** API and share one config, `.env.e2e`. That file is gitignored; copy it from `.env.e2e.example`.
+- `composer test:integration` (`tests/Integration`, `#[Group('integration')]` on **each concrete class**, because PHPUnit doesn't inherit it) checks:
+  - contracts for pricing and error codes;
+  - the full submit → reconcile lifecycle;
+  - exact costing reconciled against `/v1/usage`.
+- `npm run test:e2e` (Playwright, `tests/e2e`):
+  - `tests/e2e/server.sh` starts `APP_ENV=e2e` on 127.0.0.1:8001 as `www-data`, with its own database (`pixelforge_e2e`), plus a worker and reconcile loop;
+  - the specs drive the browser.
+- Both suites use a **dev** Pixelforge key and never the prod key or database. Limits are per account, so keep them `low` quality and few. Without a key, the integration tests skip and E2E refuses to start.
 
 Every money and state rule has a test. Use `Http::fake()` for Pixelforge and never call the real API in tests. Required cases:
 

@@ -24,3 +24,9 @@ yarn-error.log
 /.zed
 .vscode/
 .specstory/
+
+# Opt-in live test suites
+.env.e2e
+/playwright-report
+/test-results
+/tests/e2e/.auth
