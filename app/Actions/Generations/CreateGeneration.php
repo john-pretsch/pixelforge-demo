@@ -26,7 +26,7 @@ class CreateGeneration
      */
     public function handle(User $user, array $input): Generation
     {
-        $referenceImages = array_values($input['reference_images'] ?? []);
+        $referenceImages = $input['reference_images'] ?? [];
         $estimate = $this->estimate($input['prompt'], $input['size'], $input['quality'], count($referenceImages));
 
         $generation = Generation::create([

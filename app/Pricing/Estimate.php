@@ -21,7 +21,16 @@ final readonly class Estimate
         return ! $price->isLessThan($this->priceMin) && ! $price->isGreaterThan($this->priceMax);
     }
 
-    /** Customer-facing shape: exact strings plus a display range that never understates. */
+    /**
+     * Customer-facing shape: exact strings plus a display range that never understates.
+     *
+     * @return array{
+     *     price_min: string,
+     *     price_max: string,
+     *     display: array{min: string|null, max: string|null},
+     *     tokens: array{min: array<string, int>, max: array<string, int>},
+     * }
+     */
     public function toArray(): array
     {
         return [

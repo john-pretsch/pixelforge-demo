@@ -33,6 +33,7 @@ class GenerationRequest extends FormRequest
         }
     }
 
+    /** @return array<string, mixed> */
     public function rules(): array
     {
         $pricing = app(PixelforgeClient::class)->pricing();

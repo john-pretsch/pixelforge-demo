@@ -17,6 +17,8 @@ Laravel 12 (PHP 8.4), the Vue 3 + Inertia + TypeScript starter kit (includes aut
 ```bash
 composer dev                     # local: server + queue + vite
 php artisan test                 # all tests (phpunit.xml bypasses the prod config cache; keep that)
+composer analyse                 # Larastan/PHPStan level 6 (phpstan.neon); must stay at 0 errors, no baseline
+npm run lint:check               # ESLint report only (npm run lint auto-fixes)
 php artisan test --filter=Webhook
 npm run build                    # production assets
 php artisan queue:work --tries=0 # worker (jobs control their own retries)
@@ -182,6 +184,17 @@ Every money and state rule has a test. Use `Http::fake()` for Pixelforge and nev
 - Prod uses its own Pixelforge key, with the webhook URL `https://pixelforge-demo.johnpretsch.com/webhooks/pixelforge`.
 - Leave several generations in prod for reviewers, including a succeeded one, a failed one, and one from a `[duplicate]` prompt.
 - Reference configs live in `deploy/`.
+
+## Debugging (Xdebug)
+
+- Xdebug 3 is installed for both the CLI and FPM in **trigger mode**: `mode=debug`, `start_with_request=trigger`, connecting to `127.0.0.1:9003`. It stays idle unless `XDEBUG_TRIGGER` equals the secret `xdebug.trigger_value` in `/etc/php/8.4/mods-available/xdebug.ini`. That secret is never committed.
+- In VS Code (Remote-SSH, the PHP Debug extension), `.vscode/launch.json` (gitignored) defines two configs: "Listen for Xdebug" and "Debug PHPUnit test".
+- Triggers:
+  - CLI: `XDEBUG_TRIGGER=<secret> php artisan …`. `php artisan test` opens two sessions: artisan, then phpunit.
+  - Web: a cookie or query parameter `XDEBUG_TRIGGER=<secret>`.
+  - Real webhooks: temporarily append `?XDEBUG_TRIGGER=<secret>` to the dashboard webhook URL. A pause longer than 10 seconds makes Pixelforge retry the delivery later, and dedupe handles that.
+- Tests log to the `null` channel (`phpunit.xml`), so a test run as root can never create a root-owned daily log that `www-data` can't write to.
+- To disable for FPM: `phpdismod -s fpm xdebug && systemctl restart php8.4-fpm`.
 
 ## Working conventions
 

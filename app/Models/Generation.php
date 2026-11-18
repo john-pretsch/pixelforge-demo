@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Enums\GenerationStatus;
+use Database\Factories\GenerationFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -21,9 +23,20 @@ use Illuminate\Support\Str;
  * @property string $estimated_price_max
  * @property string|null $provider_cost
  * @property string|null $price
+ * @property list<string>|null $reference_images
+ * @property array<string, int>|null $usage
+ * @property array<string, string>|null $rates
+ * @property Carbon|null $image_url_expires_at
+ * @property Carbon|null $submitted_at
+ * @property Carbon|null $started_at
+ * @property Carbon|null $completed_at
+ * @property Carbon|null $last_synced_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Generation extends Model
 {
+    /** @use HasFactory<GenerationFactory> */
     use HasFactory;
 
     protected $guarded = ['id'];
@@ -43,6 +56,7 @@ class Generation extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

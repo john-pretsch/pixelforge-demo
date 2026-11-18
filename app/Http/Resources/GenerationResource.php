@@ -12,6 +12,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /** @mixin Generation */
 class GenerationResource extends JsonResource
 {
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         $status = $this->status;
