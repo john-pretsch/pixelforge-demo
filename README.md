@@ -29,4 +29,8 @@ npm run lint:check    # ESLint (report only)
 ```
 
 ### Dependency Verification
-This is an area where both human and AI agents often slip up.
+This is an area where both human and AI agents often slip up. npm audit found many issues. The below command fixes non breaking changes. If this was a production app, I would include a thorough analysis of this in my devsec hardening plan.
+
+```bash
+    npm audit fix #fix 
+```
