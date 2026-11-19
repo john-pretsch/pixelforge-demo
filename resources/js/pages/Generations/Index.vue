@@ -46,7 +46,7 @@ watch(inFlight, (active) => (active ? start() : stop()), { immediate: true });
 
             <section class="rounded-xl border p-5">
                 <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
-                    <h1 class="text-lg font-semibold">New image</h1>
+                    <h1 class="text-lg font-semibold">Create Something Awesome:</h1>
                     <CreditBalance />
                 </div>
                 <GenerationForm :options="options" :markup-percent="markupPercent" />
