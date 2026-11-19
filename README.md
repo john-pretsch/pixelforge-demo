@@ -60,7 +60,10 @@ Run these from the project root. On the server, run PHP as `www-data`.
 
 ### Manual Testing
 
-Finally, lets do some checks.
+Finally, lets do some manual checks.
+
+#### Testing through the UI
+
 
 ## Stretch goals
 
@@ -84,4 +87,15 @@ Both stretch goals are built.
 ```bash
 sudo -u www-data php artisan pixelforge:make-admin you@example.com   # --revoke to remove
 ```
+
+#### Known discrepancy: 2026-11-17
+
+The report flags 2026-11-17. Pixelforge billed 3 generations ($0.082990000), but the app has a record of only 1 ($0.051512500). The difference, $0.031477500, is exactly the cost of two smoke tests run with the **production** key while the app was being built:
+
+| Pixelforge id | Cost | Origin |
+|---|---|---|
+| `gen_01M7N8G29M9E60870M9QJ4H2MD` | $0.017070000 | A direct API call that became the test fixture in `tests/Support/PixelforgeFixtures.php` |
+| `gen_01M7NF4EPYX36STS9NHJZYRV0H` | $0.014407500 | An app smoke test run against the test database, which is wiped on every test run |
+
+No user was charged for either one. They were left in place on purpose: adding records just to force a match would defeat the point of the reconciliation. Every other day, and every generation in the app, matches `/v1/usage` exactly. Lesson learned: smoke tests use a dev key.
 

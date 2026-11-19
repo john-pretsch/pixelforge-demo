@@ -216,7 +216,7 @@ Every money and state rule has a test. Use `Http::fake()` for Pixelforge and nev
 - Config is cached (`php artisan optimize`), so after any `.env` change run `sudo -u www-data php artisan config:cache`.
 - Prod uses its own Pixelforge key, with the webhook URL `https://pixelforge-demo.johnpretsch.com/webhooks/pixelforge`.
 - Leave several generations in prod for reviewers, including a succeeded one, a failed one, and one from a `[duplicate]` prompt.
-- New users start with $0 in credits. Prod 2026-11-17 shows a known /v1/usage mismatch: 2 smoke-test generations were made directly against the API during the build and have no local rows.
+- New users start with $0 in credits. Prod 2026-11-17 has a known /v1/usage mismatch of $0.031477500: two build-time smoke tests ran on the prod key and have no prod rows (see the README). Don't "fix" it by inserting rows. Run smoke tests with the dev key only.
 - Reference configs live in `deploy/`.
 
 ## Debugging (Xdebug)
