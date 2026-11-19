@@ -1,3 +1,4 @@
 .env
 .vscode/
 .specstory/
+node_modules
