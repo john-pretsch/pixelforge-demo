@@ -64,6 +64,8 @@ Finally, lets do some manual checks.
 
 #### Testing through the UI
 
+- Sign up/login with a new user
+- Login to testadmin1@johnpretsch.com on a different browser profile
 
 ## Stretch goals
 

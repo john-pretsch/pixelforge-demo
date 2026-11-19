@@ -74,10 +74,24 @@ const page = usePage<SharedData>();
 const credits = computed(() => page.props.credits);
 const cannotAfford = computed(() => !!estimate.value && !!credits.value && isGreaterThan(estimate.value.price_max, credits.value.balance));
 
+// The textarea's maxlength silently truncates a paste that doesn't fit: tell the user.
+const truncatedBy = ref(0);
+const onPromptPaste = (e: ClipboardEvent) => {
+    const el = e.target as HTMLTextAreaElement;
+    const pasted = e.clipboardData?.getData('text') ?? '';
+    const room = MAX_PROMPT - (el.value.length - (el.selectionEnd - el.selectionStart));
+    truncatedBy.value = Math.max(0, pasted.length - room);
+};
+// Any later edit (other than the paste itself) dismisses the notice.
+const onPromptInput = (e: Event) => {
+    if ((e as InputEvent).inputType !== 'insertFromPaste') truncatedBy.value = 0;
+};
+
 const submit = () => {
     form.transform((data) => ({ ...data, reference_images: filledRefs.value })).post(route('generations.store'), {
         preserveScroll: true,
         onSuccess: () => {
+            truncatedBy.value = 0;
             form.reset('prompt', 'reference_images');
         },
     });
@@ -104,7 +118,13 @@ const selectClass =
                 :maxlength="MAX_PROMPT"
                 placeholder="Describe, in detail, the image you wish to generate"
                 class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
+                @paste="onPromptPaste"
+                @input="onPromptInput"
             />
+            <p v-if="truncatedBy > 0" class="text-sm text-amber-700 dark:text-amber-400" role="status" data-testid="prompt-truncated">
+                Your paste was cut to fit the {{ MAX_PROMPT.toLocaleString() }}-character limit: the last {{ truncatedBy.toLocaleString() }}
+                {{ truncatedBy === 1 ? 'character was' : 'characters were' }} not added.
+            </p>
             <InputError :message="form.errors.prompt" />
         </div>
 
@@ -161,10 +181,6 @@ const selectClass =
                         <span v-else class="text-muted-foreground">—</span>
                         <Loader2 v-if="estimating" class="size-4 animate-spin text-muted-foreground" />
                     </div>
-                    <p class="mt-1 max-w-md text-xs text-muted-foreground">
-                        You pay Pixelforge's token cost plus a {{ markupPercent }}% service fee. The final amount depends on tokens used and is always
-                        within this range. Failed generations are free.
-                    </p>
                     <p v-if="cannotAfford && estimate && credits" class="mt-2 text-sm text-red-600" data-testid="insufficient-credits">
                         Not enough credits: this can cost up to {{ estimate.display.max }} and you have {{ credits.display }}. Buy credits to
                         continue.

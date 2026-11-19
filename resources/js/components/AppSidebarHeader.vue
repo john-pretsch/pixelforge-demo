@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItemType } from '@/types';
+import { Link } from '@inertiajs/vue3';
+import { LogOut } from 'lucide-vue-next';
 
 defineProps<{
     breadcrumbs?: BreadcrumbItemType[];
@@ -34,5 +37,12 @@ defineProps<{
                 </Breadcrumb>
             </template>
         </div>
+        <!-- Always-visible logout (also in the user menu at the bottom of the sidebar). -->
+        <Button variant="ghost" size="sm" class="ml-auto" as-child>
+            <Link :href="route('logout')" method="post" as="button" data-testid="header-logout">
+                <LogOut />
+                Log out
+            </Link>
+        </Button>
     </header>
 </template>
