@@ -158,6 +158,68 @@ class GenerationBillingTest extends TestCase
                 ->where('credits.packs', ['5.00', '10.00', '25.00']));
     }
 
+    public function test_overloaded_failure_can_be_retried_as_a_new_generation(): void
+    {
+        $user = User::factory()->withCredits('1.00')->create();
+        $original = $this->submit($user);
+        app(ApplyProviderState::class)->fail($original, 'overloaded', 'Pixelforge stayed busy for too long.');
+
+        $this->actingAs($user)->get('/generations')
+            ->assertInertia(fn ($page) => $page->where('generations.0.can_retry', true));
+
+        $this->actingAs($user)->post("/generations/{$original->id}/retry")
+            ->assertRedirect('/generations')
+            ->assertSessionHas('success');
+
+        $retry = Generation::where('user_id', $user->id)->latest('id')->firstOrFail();
+        $this->assertNotSame($original->id, $retry->id);
+        $this->assertNotSame($original->uuid, $retry->uuid); // new Idempotency-Key
+        $this->assertSame(GenerationStatus::Pending, $retry->status);
+        $this->assertSame([$original->prompt, $original->size, $original->quality], [$retry->prompt, $retry->size, $retry->quality]);
+        // The original stays failed and released; only the retry holds credits.
+        $this->assertSame(GenerationStatus::Failed, $original->fresh()->status);
+        $this->assertSame(Money::toStorage(Money::of('1')->minus($retry->estimated_price_max)), $this->balance($user));
+        Queue::assertPushed(SubmitGeneration::class, fn ($job) => $job->generationId === $retry->id);
+    }
+
+    public function test_only_busy_failures_can_be_retried(): void
+    {
+        $user = User::factory()->withCredits('1.00')->create();
+        $blocked = $this->submit($user);
+        app(ApplyProviderState::class)->fail($blocked, 'content_policy_violation', 'Blocked.');
+        $inFlight = $this->submit($user);
+
+        foreach ([$blocked, $inFlight] as $g) {
+            $this->actingAs($user)->from('/generations')->post("/generations/{$g->id}/retry")
+                ->assertRedirect('/generations')->assertSessionHas('error');
+        }
+
+        $this->assertSame(2, Generation::count());
+    }
+
+    public function test_cannot_retry_someone_elses_generation(): void
+    {
+        $owner = User::factory()->withCredits('1.00')->create();
+        $g = $this->submit($owner);
+        app(ApplyProviderState::class)->fail($g, 'overloaded', 'Busy.');
+
+        $this->actingAs(User::factory()->withCredits('1.00')->create())->post("/generations/{$g->id}/retry")->assertNotFound();
+        $this->assertSame(1, Generation::count());
+    }
+
+    public function test_retry_still_requires_enough_credits(): void
+    {
+        $user = User::factory()->withCredits('1.00')->create();
+        $g = $this->submit($user);
+        app(ApplyProviderState::class)->fail($g, 'overloaded', 'Busy.');
+        CreditTransaction::create(['user_id' => $user->id, 'type' => 'debit', 'amount' => '-0.999000000']);
+
+        $this->actingAs($user)->from('/generations')->post("/generations/{$g->id}/retry")
+            ->assertRedirect('/generations')
+            ->assertSessionHas('error', fn ($m) => str_starts_with($m, 'Not enough credits'));
+        $this->assertSame(1, Generation::count());
+    }
+
     private function submit(User $user): Generation
     {
         $this->actingAs($user)->post('/generations', $this->input())->assertSessionHasNoErrors();

@@ -1,10 +1,28 @@
 <script setup lang="ts">
 import StatusBadge from '@/components/generations/StatusBadge.vue';
+import { Button } from '@/components/ui/button';
 import type { Generation } from '@/types';
-import { AlertTriangle, ImageOff, Loader2 } from 'lucide-vue-next';
+import { router } from '@inertiajs/vue3';
+import { AlertTriangle, ImageOff, ImagePlus, Loader2, Pencil, RotateCcw } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{ generation: Generation }>();
+
+// Both only load the form above; nothing is submitted (or charged) until the user presses Generate.
+const emit = defineEmits<{ edit: [generation: Generation]; reuse: [generation: Generation] }>();
+
+// Resubmits as a NEW generation (fresh estimate, credit check and hold); this failed row stays as is.
+const retrying = ref(false);
+const retry = () =>
+    router.post(
+        route('generations.retry', props.generation.id),
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (retrying.value = true),
+            onFinish: () => (retrying.value = false),
+        },
+    );
 
 const imageFailed = ref(false);
 const showImage = computed(() => props.generation.image_url && !props.generation.image_expired && !imageFailed.value);
@@ -13,6 +31,8 @@ const estimateText = computed(() => {
     const e = props.generation.estimate;
     return e.display_min === e.display_max ? e.display_max : `${e.display_min} – ${e.display_max}`;
 });
+
+const canReuse = computed(() => props.generation.status === 'succeeded' && !!props.generation.image_url && !props.generation.image_expired);
 
 const created = computed(() => new Date(props.generation.created_at).toLocaleString());
 </script>
@@ -53,6 +73,36 @@ const created = computed(() => new Date(props.generation.created_at).toLocaleStr
 
             <p v-if="generation.notice" class="text-xs text-amber-700 dark:text-amber-400">{{ generation.notice }}</p>
             <p v-if="generation.error" class="text-xs text-red-600 dark:text-red-400">{{ generation.error.message }}</p>
+
+            <div v-if="generation.status === 'failed' || generation.status === 'succeeded'" class="flex flex-wrap gap-2">
+                <template v-if="generation.status === 'failed'">
+                    <Button v-if="generation.can_retry" size="sm" variant="outline" :disabled="retrying" data-testid="retry" @click="retry">
+                        <Loader2 v-if="retrying" class="animate-spin" />
+                        <RotateCcw v-else />
+                        Retry
+                    </Button>
+                    <Button size="sm" variant="outline" data-testid="edit" @click="emit('edit', generation)">
+                        <Pencil />
+                        Edit
+                    </Button>
+                </template>
+                <Button
+                    v-else
+                    size="sm"
+                    variant="outline"
+                    :disabled="!canReuse"
+                    :title="
+                        canReuse
+                            ? 'Use this image as a reference for a new image'
+                            : 'The image link has expired, so it can no longer be used as a reference'
+                    "
+                    data-testid="reuse"
+                    @click="emit('reuse', generation)"
+                >
+                    <ImagePlus />
+                    Retry with this image
+                </Button>
+            </div>
 
             <dl class="flex flex-wrap gap-x-6 gap-y-1 text-xs">
                 <div>

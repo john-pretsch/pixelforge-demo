@@ -48,6 +48,7 @@ class GenerationResource extends JsonResource
             'error' => $status === GenerationStatus::Failed
                 ? ['code' => $this->error_code, 'message' => $this->error_message]
                 : null,
+            'can_retry' => $this->canRetry(),
             'image_url' => $this->image_url,
             'image_expired' => $this->image_url_expires_at?->isPast() ?? false,
             'image_url_expires_at' => $this->image_url_expires_at?->toIso8601String(),

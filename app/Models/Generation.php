@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\GenerationStatus;
+use App\Pixelforge\PixelforgeException;
 use Database\Factories\GenerationFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -79,6 +80,16 @@ class Generation extends Model
         return is_string($localId) && Str::isUuid($localId)
             ? self::where('uuid', $localId)->first()
             : null;
+    }
+
+    /**
+     * Failed only because Pixelforge stayed busy (overloaded / rate or
+     * concurrency limited) until submission gave up. The user can retry it,
+     * which creates a NEW generation: a failed row never changes.
+     */
+    public function canRetry(): bool
+    {
+        return $this->status === GenerationStatus::Failed && PixelforgeException::isRetryableCode($this->error_code);
     }
 
     /** @param Builder<self> $query */

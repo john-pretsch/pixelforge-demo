@@ -6,6 +6,7 @@ use App\Actions\Credits\InsufficientCredits;
 use App\Actions\Generations\CreateGeneration;
 use App\Http\Requests\GenerationRequest;
 use App\Http\Resources\GenerationResource;
+use App\Models\Generation;
 use App\Pixelforge\PixelforgeClient;
 use App\Pixelforge\PixelforgeException;
 use Brick\Math\BigDecimal;
@@ -46,6 +47,33 @@ class GenerationController extends Controller
         }
 
         return to_route('generations.index')->with('success', 'Generation submitted.');
+    }
+
+    /**
+     * Retry a generation that failed because Pixelforge stayed busy. Submits a
+     * new generation with the same settings (fresh estimate, credit check and
+     * hold); the failed original is left untouched.
+     */
+    public function retry(Request $request, Generation $generation, CreateGeneration $create): RedirectResponse
+    {
+        abort_unless($generation->user_id === $request->user()->id, 404);
+
+        if (! $generation->canRetry()) {
+            return back()->with('error', 'Only generations that failed because Pixelforge was busy can be retried.');
+        }
+
+        try {
+            $create->handle($request->user(), [
+                'prompt' => $generation->prompt,
+                'size' => $generation->size,
+                'quality' => $generation->quality,
+                'reference_images' => $generation->reference_images ?? [],
+            ]);
+        } catch (InsufficientCredits $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return to_route('generations.index')->with('success', 'Retrying: submitted as a new generation.');
     }
 
     public function estimate(GenerationRequest $request, CreateGeneration $create): JsonResponse

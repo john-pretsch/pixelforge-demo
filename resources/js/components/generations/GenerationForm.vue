@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { isGreaterThan } from '@/lib/money';
-import type { Estimate, GenerationOptions, SharedData } from '@/types';
+import type { Estimate, GenerationDraft, GenerationOptions, SharedData } from '@/types';
 import { useForm, usePage } from '@inertiajs/vue3';
 import { useDebounceFn } from '@vueuse/core';
 import axios from 'axios';
@@ -87,11 +87,31 @@ const onPromptInput = (e: Event) => {
     if ((e as InputEvent).inputType !== 'insertFromPaste') truncatedBy.value = 0;
 };
 
+// Loaded from the history ("Edit" on a failed item, "Retry with this image" on a succeeded one).
+// Nothing is submitted until the user presses Generate, so they always see the estimate first.
+
+const draftNote = ref<GenerationDraft['note']>(null);
+const promptEl = ref<HTMLTextAreaElement | null>(null);
+
+const load = (draft: GenerationDraft) => {
+    form.clearErrors();
+    form.prompt = draft.prompt;
+    if (props.options?.sizes.includes(draft.size)) form.size = draft.size;
+    if (props.options?.qualities.includes(draft.quality)) form.quality = draft.quality;
+    form.reference_images = draft.reference_images.slice(0, MAX_REFS);
+    draftNote.value = draft.note;
+    truncatedBy.value = 0;
+    promptEl.value?.focus();
+};
+
+defineExpose({ load });
+
 const submit = () => {
     form.transform((data) => ({ ...data, reference_images: filledRefs.value })).post(route('generations.store'), {
         preserveScroll: true,
         onSuccess: () => {
             truncatedBy.value = 0;
+            draftNote.value = null;
             form.reset('prompt', 'reference_images');
         },
     });
@@ -103,6 +123,21 @@ const selectClass =
 
 <template>
     <form class="space-y-5" @submit.prevent="submit">
+        <div
+            v-if="draftNote"
+            class="flex items-start gap-3 rounded-lg border p-3 text-sm"
+            :class="
+                draftNote.tone === 'charge'
+                    ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200'
+                    : 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200'
+            "
+            role="status"
+            data-testid="draft-note"
+        >
+            <p class="flex-1">{{ draftNote.text }}</p>
+            <button type="button" class="opacity-70 hover:opacity-100" aria-label="Dismiss" @click="draftNote = null"><X class="size-4" /></button>
+        </div>
+
         <div class="grid gap-2">
             <div class="flex items-baseline justify-between">
                 <Label for="prompt">Prompt</Label>
@@ -112,6 +147,7 @@ const selectClass =
             </div>
             <textarea
                 id="prompt"
+                ref="promptEl"
                 v-model="form.prompt"
                 rows="4"
                 required

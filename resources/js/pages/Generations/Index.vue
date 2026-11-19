@@ -3,10 +3,10 @@ import CreditBalance from '@/components/credits/CreditBalance.vue';
 import GenerationForm from '@/components/generations/GenerationForm.vue';
 import GenerationRow from '@/components/generations/GenerationRow.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import type { BreadcrumbItem, Generation, GenerationOptions, SharedData } from '@/types';
+import type { BreadcrumbItem, Generation, GenerationDraft, GenerationOptions, SharedData } from '@/types';
 import { Head, usePage, usePoll } from '@inertiajs/vue3';
 import { ImageIcon } from 'lucide-vue-next';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     generations: Generation[];
@@ -24,6 +24,36 @@ const inFlight = computed(() => props.generations.some((g) => !g.is_terminal));
 const { start, stop } = usePoll(3000, { only: ['generations', 'credits'] }, { autoStart: false });
 
 watch(inFlight, (active) => (active ? start() : stop()), { immediate: true });
+
+// History actions load the form; the user reviews the estimate and presses Generate.
+const formSection = ref<HTMLElement | null>(null);
+const formRef = ref<{ load: (draft: GenerationDraft) => void } | null>(null);
+const loadDraft = (draft: GenerationDraft) => {
+    formRef.value?.load(draft);
+    formSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const onEdit = (g: Generation) =>
+    loadDraft({
+        prompt: g.prompt,
+        size: g.size,
+        quality: g.quality,
+        reference_images: g.reference_images,
+        note: { tone: 'info', text: 'Loaded the prompt from a failed generation. Edit it if you like, then press Generate.' },
+    });
+
+const onReuse = (g: Generation) =>
+    loadDraft({
+        prompt: g.prompt,
+        size: g.size,
+        quality: g.quality,
+        // The finished image goes first; Pixelforge accepts at most 4 reference images.
+        reference_images: [g.image_url!, ...g.reference_images].slice(0, 4),
+        note: {
+            tone: 'charge',
+            text: 'This makes a brand-new image, using the original as a reference image, so it is charged again as a new generation. The reference image adds 765 input tokens, and the estimate below includes them. The original image is not changed.',
+        },
+    });
 </script>
 
 <template>
@@ -44,12 +74,12 @@ watch(inFlight, (active) => (active ? start() : stop()), { immediate: true });
                 {{ flash.error }}
             </div>
 
-            <section class="rounded-xl border p-5">
+            <section ref="formSection" class="scroll-mt-4 rounded-xl border p-5">
                 <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
                     <h1 class="text-lg font-semibold">Create Something Awesome:</h1>
                     <CreditBalance />
                 </div>
-                <GenerationForm :options="options" :markup-percent="markupPercent" />
+                <GenerationForm ref="formRef" :options="options" :markup-percent="markupPercent" />
             </section>
 
             <section class="space-y-3">
@@ -66,7 +96,7 @@ watch(inFlight, (active) => (active ? start() : stop()), { immediate: true });
                     No generations yet. Your images will appear here.
                 </div>
 
-                <GenerationRow v-for="g in generations" :key="g.id" :generation="g" />
+                <GenerationRow v-for="g in generations" :key="g.id" :generation="g" @edit="onEdit" @reuse="onReuse" />
             </section>
         </div>
     </AppLayout>

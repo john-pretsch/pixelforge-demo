@@ -69,6 +69,8 @@ export interface Generation {
     usage: TokenUsage | null;
     notice: string | null;
     error: { code: string | null; message: string | null } | null;
+    /** Failed because Pixelforge stayed busy: can be resubmitted as a new generation. */
+    can_retry: boolean;
     image_url: string | null;
     image_expired: boolean;
     image_url_expires_at: string | null;
@@ -134,4 +136,14 @@ export interface ProfitReport {
     days: ReportDay[];
     users: ReportUserRow[];
     usage_available: boolean;
+}
+
+/** Form contents loaded from a history item (Edit / Retry with this image). Nothing is submitted until Generate. */
+export interface GenerationDraft {
+    prompt: string;
+    size: string;
+    quality: string;
+    reference_images: string[];
+    /** Shown above the form, e.g. the "charged as a new image" note. */
+    note: { tone: 'info' | 'charge'; text: string } | null;
 }

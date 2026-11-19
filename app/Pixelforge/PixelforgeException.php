@@ -64,7 +64,12 @@ class PixelforgeException extends RuntimeException
 
     public function isRetryable(): bool
     {
-        return in_array($this->errorCode, self::RETRYABLE, true);
+        return self::isRetryableCode($this->errorCode);
+    }
+
+    public static function isRetryableCode(?string $code): bool
+    {
+        return in_array($code, self::RETRYABLE, true);
     }
 
     /** Message safe to show the end user. */

@@ -66,7 +66,13 @@ Finally, lets do some manual checks.
 
 - Sign up/login with a new user
 - Login to testadmin1@johnpretsch.com on a different browser profile
+- Buy credits and generate image. Check webhook events in dashboard. Check cost is correct
+- Create generations with triggers for error events...[blocked],[overloaded],[fail],[slow],[duplicate]
 
+## Error behavior
+- Blocked: blocked by content policy, so no further action. 
+- Overloaded: add a retry button since there is presumably nothing wrong with the content.
+- Fail: can retry if desired. 
 ## Stretch goals
 
 Both stretch goals are built.
