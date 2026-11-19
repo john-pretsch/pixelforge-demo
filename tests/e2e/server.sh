@@ -21,9 +21,9 @@ grep -q '^PIXELFORGE_API_KEY=pf_' .env.e2e || { echo "Set a DEV PIXELFORGE_API_K
 [ ! -e public/hot ] || { echo "public/hot exists: stop 'npm run dev' (E2E uses built assets)"; exit 1; }
 [ -f public/build/manifest.json ] || { echo "Run 'npm run build' first"; exit 1; }
 
-# Fresh database and a known, verified user (routes require 'verified').
+# Fresh database and a known, verified user with $10 of credits (routes require 'verified').
 php artisan migrate:fresh --force -q
-php artisan tinker --execute '\App\Models\User::factory()->create(["name" => "E2E", "email" => "e2e@example.test", "password" => "e2e-password"]);'
+php artisan tinker --execute '\App\Models\User::factory()->withCredits("10.00")->create(["name" => "E2E", "email" => "e2e@example.test", "password" => "e2e-password"]);'
 
 trap 'kill 0' EXIT
 

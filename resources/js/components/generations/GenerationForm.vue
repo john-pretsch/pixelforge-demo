@@ -3,8 +3,9 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Estimate, GenerationOptions } from '@/types';
-import { useForm } from '@inertiajs/vue3';
+import { isGreaterThan } from '@/lib/money';
+import type { Estimate, GenerationOptions, SharedData } from '@/types';
+import { useForm, usePage } from '@inertiajs/vue3';
 import { useDebounceFn } from '@vueuse/core';
 import axios from 'axios';
 import { Loader2, Plus, X } from 'lucide-vue-next';
@@ -67,6 +68,11 @@ const refErrors = computed(() =>
         .filter(([key]) => key.startsWith('reference_images'))
         .map(([, msg]) => msg),
 );
+
+// Advisory only: the server re-checks the balance under a lock and holds the upper bound.
+const page = usePage<SharedData>();
+const credits = computed(() => page.props.credits);
+const cannotAfford = computed(() => !!estimate.value && !!credits.value && isGreaterThan(estimate.value.price_max, credits.value.balance));
 
 const submit = () => {
     form.transform((data) => ({ ...data, reference_images: filledRefs.value })).post(route('generations.store'), {
@@ -159,8 +165,13 @@ const selectClass =
                         You pay Pixelforge's token cost plus a {{ markupPercent }}% service fee. The final amount depends on tokens used and is always
                         within this range. Failed generations are free.
                     </p>
+                    <p v-if="cannotAfford && estimate && credits" class="mt-2 text-sm text-red-600" data-testid="insufficient-credits">
+                        Not enough credits: this can cost up to {{ estimate.display.max }} and you have {{ credits.display }}. Buy credits to
+                        continue.
+                    </p>
+                    <InputError v-else class="mt-2" :message="form.errors.credits" />
                 </div>
-                <Button type="submit" size="lg" :disabled="form.processing || !options || !form.prompt.trim()">
+                <Button type="submit" size="lg" :disabled="form.processing || !options || !form.prompt.trim() || cannotAfford">
                     <Loader2 v-if="form.processing" class="animate-spin" />
                     Generate
                 </Button>

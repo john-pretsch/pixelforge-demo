@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Credits\InsufficientCredits;
 use App\Actions\Generations\CreateGeneration;
 use App\Http\Requests\GenerationRequest;
 use App\Http\Resources\GenerationResource;
@@ -11,6 +12,7 @@ use Brick\Math\BigDecimal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,7 +39,11 @@ class GenerationController extends Controller
     public function store(GenerationRequest $request, CreateGeneration $create): RedirectResponse
     {
         // A Pixelforge outage while pricing is rendered by the PixelforgeException handler (bootstrap/app.php).
-        $create->handle($request->user(), $request->validated());
+        try {
+            $create->handle($request->user(), $request->validated());
+        } catch (InsufficientCredits $e) {
+            throw ValidationException::withMessages(['credits' => $e->getMessage()]);
+        }
 
         return to_route('generations.index')->with('success', 'Generation submitted.');
     }

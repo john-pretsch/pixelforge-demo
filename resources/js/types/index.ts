@@ -21,6 +21,7 @@ export interface SharedData {
     quote: { message: string; author: string };
     auth: Auth;
     flash: { success: string | null; error: string | null };
+    credits: Credits | null;
     ziggy: {
         location: string;
         url: string;
@@ -36,6 +37,7 @@ export interface User {
     email: string;
     avatar?: string;
     email_verified_at: string | null;
+    is_admin: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -84,4 +86,52 @@ export interface Estimate {
     price_max: string;
     display: { min: string; max: string };
     tokens: { min: TokenUsage; max: TokenUsage };
+}
+
+export interface Credits {
+    /** Exact decimal string (9dp); holds for in-flight generations already subtracted. */
+    balance: string;
+    display: string;
+    packs: string[];
+}
+
+export interface Amount {
+    value: string;
+    display: string;
+}
+
+export interface ReportFigures {
+    generations: number;
+    charged: Amount;
+    provider_cost: Amount;
+    profit: Amount;
+    margin_percent: string | null;
+}
+
+export interface ReportReconciliation {
+    generations: number;
+    cost: Amount;
+    difference: Amount;
+    matches: boolean;
+}
+
+export interface ReportUserRow extends ReportFigures {
+    user_id: number;
+    name: string;
+    email: string;
+}
+
+export interface ReportDay extends ReportFigures {
+    date: string;
+    pixelforge: ReportReconciliation | null;
+    users: ReportUserRow[];
+}
+
+export interface ProfitReport {
+    from: string;
+    to: string;
+    totals: ReportFigures & { pixelforge: ReportReconciliation | null };
+    days: ReportDay[];
+    users: ReportUserRow[];
+    usage_available: boolean;
 }

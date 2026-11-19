@@ -37,4 +37,51 @@ This is an area where both human and AI agents often slip up. npm audit found ma
 
 ### Integration testing
 
-During the initial build, Claude create a suite of unit test which all passed. This is a tautological loop which is an inherit problem with unit testing whether human or ai generation. 
+During the initial build, Claude create a suite of unit test which all passed. This is a tautological loop which is an inherit problem with unit testing whether human or ai generation. I've added a series of tests in order to cover as much as possible automatically.
+
+#### Running the tests
+
+Run these from the project root. On the server, run PHP as `www-data`.
+
+| What | Command | Notes |
+|---|---|---|
+| Unit + Feature | `php artisan test` | 123 tests; Pixelforge is faked; uses the `pixelforge_test` DB |
+| One suite | `php artisan test --testsuite=Unit` | or `Feature` |
+| Filter by name | `php artisan test --filter=Webhook` | class or method name |
+| One file or folder | `php artisan test tests/Unit/Pricing` | |
+| Live API integration | `composer test:integration` | opt-in; real Pixelforge API with a dev key in `.env.e2e`; about 1–2 min |
+| Browser E2E | `npm run build && npm run test:e2e` | opt-in; Playwright on an isolated stack (`127.0.0.1:8001`, own DB, dev key) |
+| One E2E spec | `npx playwright test --grep "estimate"` | |
+| E2E report / trace | `npx playwright show-report` | or `npx playwright show-trace test-results/<test>/trace.zip` |
+| Static analysis (PHP) | `composer analyse` | Larastan level 6 |
+| Lint (Vue/TS) | `npm run lint:check` | report only |
+| PHP code style | `vendor/bin/pint --test` | |
+| Frontend formatting | `npm run format:check` | Prettier |
+
+### Manual Testing
+
+Finally, lets do some checks.
+
+## Stretch goals
+
+Both stretch goals are built.
+
+### Balances
+
+- Every user has a credit balance, shown next to the form. **Buy credits** adds a $5, $10 or $25 pack. This is a demo purchase with no payment, and the server accepts only those packs.
+- Credits are an append-only ledger (`credit_transactions`), and the balance is the exact `SUM` of it:
+  - When you submit, the app **holds** the top of the estimate range.
+  - When the generation finishes, the hold is **released**. On success, the exact price is **debited**. Failed generations cost nothing.
+- Generate is disabled when the estimate's upper bound is more than your balance. The server checks again while holding a lock on the user row, so two tabs can't spend the same credits.
+- Settlement happens in `ApplyProviderState`, in the same locked transaction as the status change. A unique key on (generation, type) stops a duplicate webhook from charging twice.
+
+### Admin report (`/admin/report`)
+
+- For each UTC day and each user, it shows what users were charged, what Pixelforge charged us, and the profit and margin.
+- Days are bucketed by `completed_at`, the same way Pixelforge bills. Each day's provider cost is compared exactly (9dp) with `GET /v1/usage`, and any difference is flagged.
+- Only admins can see it. Grant access with:
+
+```bash
+sudo -u www-data php artisan pixelforge:make-admin you@example.com   # --revoke to remove
+```
+

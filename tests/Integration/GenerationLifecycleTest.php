@@ -82,7 +82,7 @@ class GenerationLifecycleTest extends LiveTestCase
     {
         Queue::fake();
 
-        $generation = app(CreateGeneration::class)->handle(User::factory()->create(), [
+        $generation = app(CreateGeneration::class)->handle(User::factory()->withCredits()->create(), [
             'prompt' => $prompt,
             'size' => '1024x1024',
             'quality' => 'low',

@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\CreditTransactionType;
+use App\Models\CreditTransaction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -41,5 +43,21 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    /** Give the user purchased credits (USD decimal string). */
+    public function withCredits(string $amount = '10.00'): static
+    {
+        return $this->afterCreating(fn (User $user) => CreditTransaction::create([
+            'user_id' => $user->id,
+            'type' => CreditTransactionType::Purchase,
+            'amount' => $amount,
+            'description' => 'Factory credits',
+        ]));
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn () => ['is_admin' => true]);
     }
 }

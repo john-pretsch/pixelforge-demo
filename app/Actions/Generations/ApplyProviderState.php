@@ -2,6 +2,7 @@
 
 namespace App\Actions\Generations;
 
+use App\Actions\Credits\Ledger;
 use App\Enums\GenerationStatus;
 use App\Models\Generation;
 use App\Pricing\CostCalculator;
@@ -22,6 +23,8 @@ use InvalidArgumentException;
  *   and out-of-order updates are no-ops.
  * - Actual cost is written once, on the transition into `succeeded`, from the
  *   rates locked on the provider generation. Failed generations cost $0.
+ * - The credit hold is settled in the same transaction: released on any
+ *   terminal state, plus a debit of the actual price on success.
  */
 class ApplyProviderState
 {
@@ -124,6 +127,8 @@ class ApplyProviderState
         $row->completed_at = self::time($remote['completed_at'] ?? null) ?? now();
         $row->error_code = null;
         $row->error_message = null;
+
+        Ledger::settle($row); // Release the hold, debit the actual price.
     }
 
     private function recordFailure(Generation $row, string $code, string $message, ?Carbon $completedAt): void
@@ -133,6 +138,8 @@ class ApplyProviderState
         $row->error_code = $code;
         $row->error_message = $message;
         $row->completed_at = $completedAt ?? now();
+
+        Ledger::settle($row); // Release the hold: failures are free.
     }
 
     private static function failureMessage(mixed $error): string

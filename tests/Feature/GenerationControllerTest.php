@@ -23,7 +23,7 @@ class GenerationControllerTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->withCredits()->create();
     }
 
     /** Pricing is faked per test so outage tests can register a different response. */

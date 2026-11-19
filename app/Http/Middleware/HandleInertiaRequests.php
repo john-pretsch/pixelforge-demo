@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Actions\Credits\PurchaseCredits;
+use App\Pricing\Money;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -45,6 +47,12 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Lazy, so the generations poll can refresh it with `only: ['credits']`.
+            'credits' => fn () => $request->user() ? [
+                'balance' => Money::toStorage($balance = $request->user()->balance()),
+                'display' => $balance->isNegative() ? '−'.Money::format($balance->abs()) : Money::format($balance),
+                'packs' => PurchaseCredits::packs(),
+            ] : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

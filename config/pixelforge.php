@@ -20,6 +20,9 @@ return [
     // claude picked this value. probably ok?
     'pricing_cache_ttl' => 600, // 10 minutes
 
+    // Fake "Buy credits" packs (USD). The client picks one; it can't send an arbitrary amount.
+    'credit_packs' => ['5.00', '10.00', '25.00'],
+
     // HTTP client timeouts (seconds).
     'timeout' => 15,
     'connect_timeout' => 5,

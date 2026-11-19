@@ -8,7 +8,7 @@ A take-home for PromptEdit (Senior Product Engineer). It's a Laravel + Vue + Ine
 - API docs: https://pixelforge.promptedit.dev/docs
 - Deployed at: https://pixelforge-demo.johnpretsch.com (this server, served by nginx)
 
-Stretch goals (credit balances and an admin profit report) are **designed in but built only after the required scope ships**.
+Stretch goals (credit balances and an admin profit report) are **built**. See "Credits and admin report" below.
 
 ## Stack and commands
 
@@ -25,6 +25,7 @@ php artisan test --filter=Webhook
 npm run build                    # production assets
 php artisan queue:work --tries=0 # worker (jobs control their own retries)
 php artisan pixelforge:reconcile # polling fallback (scheduled every minute)
+php artisan pixelforge:make-admin <email> [--revoke]  # access to /admin/report
 php artisan schedule:run         # run by cron in prod
 ```
 
@@ -93,15 +94,20 @@ app/
     Estimate.php                       # min/max tokens, provider cost and price; display range
     Money.php                          # BigDecimal helpers + display formatting
   Actions/Generations/
-    CreateGeneration.php               # validate -> estimate -> insert pending -> dispatch
-    ApplyProviderState.php             # single transition + costing point
+    CreateGeneration.php               # estimate -> lock user, check balance -> insert pending + hold -> dispatch
+    ApplyProviderState.php             # single transition + costing + credit settlement point
+  Actions/Credits/                     # Ledger (hold/settle), PurchaseCredits, InsufficientCredits
+  Reports/ProfitReport.php             # admin report: per UTC day/user, reconciled with /v1/usage
   Jobs/SubmitGeneration.php            # POST with Idempotency-Key, retry/backoff policy
   Console/Commands/ReconcileGenerations.php
   Http/Controllers/GenerationController.php       # index, store, estimate
   Http/Controllers/PixelforgeWebhookController.php
+  Http/Controllers/CreditController.php            # fake purchase
+  Http/Controllers/Admin/ReportController.php
   Http/Middleware/VerifyPixelforgeSignature.php
 config/pixelforge.php                  # base_url, api_key, webhook_secret, markup, signature_tolerance
-resources/js/pages/Generations/Index.vue          # form + history
+resources/js/pages/Generations/Index.vue          # form + history + credit balance
+resources/js/pages/Admin/Report.vue               # profit report
 resources/js/components/generations/   # GenerationForm, CostEstimate, StatusBadge, GenerationRow
 deploy/                                # nginx vhost, systemd worker unit, crontab (reference copies)
 tests/Unit/{Pricing,Pixelforge}/  tests/Feature/
@@ -112,9 +118,22 @@ tests/Unit/{Pricing,Pixelforge}/  tests/Feature/
 - The history refreshes with an Inertia partial reload (`router.reload({ only: ['generations'] })`) every 3 seconds while any row isn't terminal.
 - The page shows the status badge, the estimated range, the actual cost (once succeeded), the error message (if failed), and the image. Expired image URLs are acceptable.
 
-**Stretch (later):**
-- `credit_transactions` ledger: `user_id`, nullable `generation_id`, `type` purchase|debit|hold, `amount NUMERIC(20,9)`, unique `(generation_id, type)`. The balance is the SUM of these rows. Holds use the estimate's upper bound.
-- The admin report groups by the **UTC date of `completed_at`**, the same bucketing as `/v1/usage`, so provider cost matches.
+## Credits and admin report
+
+**Credits:**
+- The `credit_transactions` ledger is append-only. Columns: `user_id`, nullable `generation_id`, `type` (`purchase`|`hold`|`release`|`debit`), signed `amount NUMERIC(20,9)`, unique `(generation_id, type)`. The balance is `User::balance()`, the exact SUM of these rows. Never store a balance column.
+- `CreateGeneration`:
+  - locks the user row;
+  - throws `InsufficientCredits` if the balance is below `estimate.priceMax`;
+  - otherwise inserts the generation and a `hold` of −priceMax (`Ledger::hold`).
+- `ApplyProviderState` calls `Ledger::settle()` on the one-time terminal transition: a `release` of +hold, plus a `debit` of −price on success. Generations created before credits existed have no hold, and settle skips them.
+- Purchases are fake: only `config('pixelforge.credit_packs')` amounts are allowed, via `POST /credits` (`PurchaseCredits`).
+- The shared Inertia prop `credits` is lazy, so the generations poll reloads `only: ['generations', 'credits']`.
+
+**Admin report:**
+- `GET /admin/report` uses the `can:admin` gate (`users.is_admin`, which isn't mass assignable).
+- `App\Reports\ProfitReport` sums succeeded generations by the **UTC date of `completed_at`** and by user: charged = `price`, provider cost = `provider_cost`, profit = the difference.
+- Each day is reconciled exactly against `GET /v1/usage` (`cost_usd` and count), cached for 60 seconds. If Pixelforge is down, the page still renders.
 
 ## Pixelforge API quick reference
 
@@ -186,6 +205,8 @@ Every money and state rule has a test. Use `Http::fake()` for Pixelforge and nev
 - **Early webhooks:** a webhook that arrives before `provider_id` is set matches the row by `metadata.local_id`.
 - **Failures:** `failed` means an actual cost of 0.
 - **Submission errors:** 429/503 releases the job with the `Retry-After` delay. A 400 content policy error fails the row with $0 and doesn't retry. A replay with the same idempotency key creates no duplicate.
+- **Credits:** an unaffordable submission creates nothing; the hold equals the estimate max; success leaves the balance down by exactly `price`; every failure path restores it; settlement happens once.
+- **Admin report:** per-day and per-user sums are exact, a 1-nanodollar difference from `/v1/usage` is flagged, and non-admins get 403.
 
 ## Deployment (this server)
 
@@ -195,6 +216,7 @@ Every money and state rule has a test. Use `Http::fake()` for Pixelforge and nev
 - Config is cached (`php artisan optimize`), so after any `.env` change run `sudo -u www-data php artisan config:cache`.
 - Prod uses its own Pixelforge key, with the webhook URL `https://pixelforge-demo.johnpretsch.com/webhooks/pixelforge`.
 - Leave several generations in prod for reviewers, including a succeeded one, a failed one, and one from a `[duplicate]` prompt.
+- New users start with $0 in credits. Prod 2026-11-17 shows a known /v1/usage mismatch: 2 smoke-test generations were made directly against the API during the build and have no local rows.
 - Reference configs live in `deploy/`.
 
 ## Debugging (Xdebug)
