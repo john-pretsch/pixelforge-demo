@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -50,5 +51,40 @@ class AuthenticationTest extends TestCase
 
         $this->assertGuest();
         $response->assertRedirect('/');
+    }
+
+    public function test_logout_with_a_stale_csrf_token_still_logs_out_and_goes_home()
+    {
+        // CSRF is skipped under PHPUnit; enforce it so the stale token fails.
+        $this->app->instance(ValidateCsrfToken::class, new class($this->app, $this->app['encrypter']) extends ValidateCsrfToken
+        {
+            protected function runningUnitTests()
+            {
+                return false;
+            }
+        });
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post('/logout', ['_token' => 'stale']);
+
+        $response->assertRedirect('/');
+        $this->assertGuest();
+    }
+
+    public function test_other_stale_csrf_posts_still_get_419()
+    {
+        $this->app->instance(ValidateCsrfToken::class, new class($this->app, $this->app['encrypter']) extends ValidateCsrfToken
+        {
+            protected function runningUnitTests()
+            {
+                return false;
+            }
+        });
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/credits', ['_token' => 'stale', 'amount' => '5.00'])->assertStatus(419);
+        $this->assertAuthenticatedAs($user);
     }
 }

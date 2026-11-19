@@ -9,7 +9,9 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -30,6 +32,22 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // Logging out from a stale tab (session expired, or already logged out
+        // elsewhere) fails CSRF with a 419. The user wants to be logged out
+        // anyway, so finish the job and land on the welcome page.
+        // (Laravel has already turned the TokenMismatchException into a 419 HttpException here.)
+        $exceptions->render(function (HttpException $e, Request $request) {
+            if ($e->getStatusCode() !== 419 || ! $request->routeIs('logout')) {
+                return null;
+            }
+
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect('/');
+        });
+
         // Pixelforge unreachable while serving a user request (e.g. /v1/pricing
         // during validation): explain instead of a 500. Nothing was created.
         $exceptions->render(function (PixelforgeException $e, Request $request) {

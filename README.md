@@ -4,8 +4,7 @@
 A Laravel 12 + Vue 3 + Inertia app that generates images through **Pixelforge**, a simulated asynchronous image API. Users see an estimated price before they submit and get live status updates. 
 App:
 https://pixelforge-demo.johnpretsch.com
-Repo:
-
+Repo: https://github.com/john-pretsch/pixelforge-demo
 
 ## How was it built
 
@@ -19,9 +18,10 @@ The code was generated using both planning mode, manual mode and automatic mode.
 ## Design considerations
 
 - Allow iteration. Retry with this image includes the image and previous prompt as inputs for another try.
-- Reference images from url or local upload
-- Nice response Vue front end.
+- Reference images from url or local upload.
+- Nice responsive Vue front end.
 - Sign up/login streamlined. No 2fa, forgot password ect.
+- Authorization/Authentication is out of the box from Laravel
 
 ## Now What?
 
@@ -48,7 +48,7 @@ This is an area where both human and AI agents often slip up. npm audit found ma
 
 ### Integration testing
 
-During the initial build, Claude create a suite of unit test which all passed. This is a tautological loop which is an inherit problem with unit testing whether human or ai generation. I've added a series of tests in order to cover as much as possible automatically.
+During the initial build, Claude create a suite of unit tests which all passed. This is a tautological loop which is an inherit problem with unit testing whether human or ai generation. I've added a series of tests in order to cover as much as possible automatically.
 
 #### Running the tests
 
@@ -69,18 +69,16 @@ Run these from the project root. On the server, run PHP as `www-data`.
 | PHP code style | `vendor/bin/pint --test` | |
 | Frontend formatting | `npm run format:check` | Prettier |
 
-### Manual Testing
+### Manual Testing In UI
 
-Finally, lets do some manual checks.
-
-#### Testing through the UI
+Simply walk through the functionality from a web browser and other devices.
 
 - Sign up/login with a new user
 - Login to testadmin1@johnpretsch.com on a different browser profile
 - Buy credits and generate image. Check webhook events in dashboard. Check cost is correct
 - Create generations with triggers for error events...[blocked],[overloaded],[fail],[slow],[duplicate]
 
-## Error behavior
+#### Error behavior
 - Blocked: blocked by content policy, so no further action. 
 - Overloaded: add a retry button since there is presumably nothing wrong with the content.
 - Fail: can retry if desired. 
