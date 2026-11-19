@@ -19,8 +19,18 @@ use Inertia\Response;
 
 class GenerationController extends Controller
 {
-    public function index(Request $request, PixelforgeClient $client): Response
+    /** History page size. */
+    public const PER_PAGE = 10;
+
+    public function index(Request $request, PixelforgeClient $client): Response|RedirectResponse
     {
+        $page = $request->user()->generations()->latest('id')->paginate(self::PER_PAGE)->withQueryString();
+
+        // Past the end (e.g. a stale ?page= link): go to the last page instead of showing nothing.
+        if ($page->isEmpty() && $page->currentPage() > 1) {
+            return to_route('generations.index', ['page' => $page->lastPage()]);
+        }
+
         try {
             $pricing = $client->pricing();
             $options = ['sizes' => $pricing->sizes(), 'qualities' => $pricing->qualities()];
@@ -28,10 +38,16 @@ class GenerationController extends Controller
             $options = null; // Form shows "pricing unavailable" and disables submit.
         }
 
-        $generations = $request->user()->generations()->latest('id')->limit(50)->get();
-
         return Inertia::render('Generations/Index', [
-            'generations' => GenerationResource::collection($generations)->resolve($request),
+            'generations' => GenerationResource::collection($page->getCollection())->resolve($request),
+            'pagination' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+                'from' => $page->firstItem(),
+                'to' => $page->lastItem(),
+            ],
             'options' => $options,
             'markupPercent' => (string) BigDecimal::of(config('pixelforge.markup'))->minus(1)->multipliedBy(100)->stripTrailingZeros(),
         ]);

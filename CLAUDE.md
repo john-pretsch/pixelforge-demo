@@ -103,6 +103,7 @@ app/
   Http/Controllers/GenerationController.php       # index, store, estimate
   Http/Controllers/PixelforgeWebhookController.php
   Http/Controllers/CreditController.php            # fake purchase
+  Http/Controllers/ReferenceImageController.php    # local image upload -> public URL for reference_images
   Http/Controllers/Admin/ReportController.php
   Http/Middleware/VerifyPixelforgeSignature.php
 config/pixelforge.php                  # base_url, api_key, webhook_secret, markup, signature_tolerance
@@ -214,6 +215,7 @@ Every money and state rule has a test. Use `Http::fake()` for Pixelforge and nev
 - Queue worker: the systemd unit `pixelforge-worker` (`deploy/pixelforge-worker.service`) runs `queue:work --tries=0` as `www-data`; supervisor isn't installed. After deploying code, run `systemctl restart pixelforge-worker`.
 - Scheduler: a line in `www-data`'s crontab (`deploy/crontab`) runs `schedule:run` every minute. That crontab is shared with another site, so append to it and never replace it.
 - Config is cached (`php artisan optimize`), so after any `.env` change run `sudo -u www-data php artisan config:cache`.
+- Uploaded reference images (`POST /reference-images`, `ReferenceImageController`) go to the `public` disk under `storage/app/public/reference-images/{user_id}/` and are served via the `public/storage` symlink (`php artisan storage:link`, run as root because `public/` is root-owned). `storage/app/public` and `storage/framework/testing` must be owned by `www-data`. Uploads are capped at 2 MB, matching nginx `client_max_body_size` and PHP `upload_max_filesize`; the browser resizes larger images first (`resources/js/lib/image.ts`). Nothing cleans up old uploads yet.
 - Prod uses its own Pixelforge key, with the webhook URL `https://pixelforge-demo.johnpretsch.com/webhooks/pixelforge`.
 - Leave several generations in prod for reviewers, including a succeeded one, a failed one, and one from a `[duplicate]` prompt.
 - New users start with $0 in credits. Prod 2026-11-17 has a known /v1/usage mismatch of $0.031477500: two build-time smoke tests ran on the prod key and have no prod rows (see the README). Don't "fix" it by inserting rows. Run smoke tests with the dev key only.

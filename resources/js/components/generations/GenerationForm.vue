@@ -3,12 +3,13 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MAX_UPLOAD_BYTES, shrinkForUpload } from '@/lib/image';
 import { isGreaterThan } from '@/lib/money';
 import type { Estimate, GenerationDraft, GenerationOptions, SharedData } from '@/types';
 import { useForm, usePage } from '@inertiajs/vue3';
 import { useDebounceFn } from '@vueuse/core';
 import axios from 'axios';
-import { ImageOff, Loader2, Plus, X } from 'lucide-vue-next';
+import { ImageOff, Loader2, Plus, Upload, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -27,17 +28,6 @@ const form = useForm({
     size: props.options?.sizes[0] ?? '1024x1024',
     quality: props.options?.qualities.includes('medium') ? 'medium' : (props.options?.qualities[0] ?? 'medium'),
     reference_images: [] as string[],
-});
-
-// Preview of the server's default (Generation::titleFromPrompt): first five words, cut to 25 with "…".
-const defaultTitle = computed(() => {
-    const title = form.prompt.trim().split(/\s+/).filter(Boolean).slice(0, 5).join(' ');
-    return [...title].length > MAX_TITLE
-        ? [...title]
-              .slice(0, MAX_TITLE - 1)
-              .join('')
-              .trimEnd() + '…'
-        : title;
 });
 
 const estimate = ref<Estimate | null>(null);
@@ -91,6 +81,58 @@ const brokenPreviews = ref(new Set<string>());
 const markBroken = (url: string) => (brokenPreviews.value = new Set(brokenPreviews.value).add(url));
 
 const addRef = () => form.reference_images.length < MAX_REFS && form.reference_images.push('');
+
+// Local files: shrunk in the browser if needed, uploaded, then used by URL like any other reference image.
+const fileInput = ref<HTMLInputElement | null>(null);
+const uploading = ref(0);
+const uploadErrors = ref<string[]>([]);
+const freeSlots = computed(() => MAX_REFS - filledRefs.value.length);
+
+const placeRef = (url: string) => {
+    const empty = form.reference_images.findIndex((u) => u.trim() === '');
+    if (empty >= 0) form.reference_images[empty] = url;
+    else if (form.reference_images.length < MAX_REFS) form.reference_images.push(url);
+};
+
+const uploadOne = async (file: File) => {
+    try {
+        const prepared = await shrinkForUpload(file);
+        if (prepared.size > MAX_UPLOAD_BYTES) throw new Error('too large even after resizing (2 MB max).');
+
+        const body = new FormData();
+        body.append('image', prepared);
+        const { data } = await axios.post<{ url: string }>(route('reference-images.store'), body);
+        placeRef(data.url);
+    } catch (e) {
+        let message = 'could not be read as an image.';
+        if (axios.isAxiosError(e)) {
+            message =
+                e.response?.status === 429
+                    ? 'too many uploads. Wait a minute and try again.'
+                    : (e.response?.data?.errors?.image?.[0] ?? 'upload failed. Please try again.');
+        } else if (e instanceof Error && e.message.startsWith('too large')) {
+            message = e.message;
+        }
+        uploadErrors.value.push(`${file.name}: ${message}`);
+    } finally {
+        uploading.value--;
+    }
+};
+
+const onFilesChosen = async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    input.value = ''; // allow choosing the same file again
+    uploadErrors.value = [];
+
+    const accepted = files.slice(0, freeSlots.value);
+    if (files.length > accepted.length) {
+        uploadErrors.value.push(`Only ${MAX_REFS} reference images are allowed, so ${files.length - accepted.length} file(s) were skipped.`);
+    }
+
+    uploading.value += accepted.length;
+    await Promise.all(accepted.map(uploadOne));
+};
 const removeRef = (i: number) => form.reference_images.splice(i, 1);
 
 const refErrors = computed(() =>
@@ -174,13 +216,7 @@ const selectClass =
                 <Label for="title">Title</Label>
                 <span class="text-xs text-muted-foreground">{{ form.title.length }} / {{ MAX_TITLE }}</span>
             </div>
-            <Input
-                id="title"
-                v-model="form.title"
-                :maxlength="MAX_TITLE"
-                :placeholder="defaultTitle || 'Optional: defaults to the first five words of the prompt'"
-                autocomplete="off"
-            />
+            <Input id="title" v-model="form.title" :maxlength="MAX_TITLE" autocomplete="off" />
             <p class="text-xs text-muted-foreground">
                 Optional, just for your history. Leave it blank to use the first five words of the prompt. It isn't sent to Pixelforge.
             </p>
@@ -266,11 +302,37 @@ const selectClass =
                     <span class="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] font-medium text-white">{{ p.index + 1 }}</span>
                 </a>
             </div>
-            <div>
+            <div class="flex flex-wrap gap-2">
                 <Button v-if="form.reference_images.length < MAX_REFS" type="button" variant="outline" size="sm" @click="addRef">
                     <Plus /> Add reference image
                 </Button>
+                <Button
+                    v-if="freeSlots > 0 || uploading > 0"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="uploading > 0 || freeSlots <= 0"
+                    data-testid="upload-reference"
+                    @click="fileInput?.click()"
+                >
+                    <Loader2 v-if="uploading > 0" class="animate-spin" />
+                    <Upload v-else />
+                    {{ uploading > 0 ? `Uploading ${uploading}…` : 'Upload image' }}
+                </Button>
+                <input
+                    ref="fileInput"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    multiple
+                    class="hidden"
+                    data-testid="upload-input"
+                    @change="onFilesChosen"
+                />
             </div>
+            <p class="text-xs text-muted-foreground">
+                Uploaded images are stored on this site and sent to Pixelforge by link. Large images are resized to 2048px first.
+            </p>
+            <InputError v-for="(msg, i) in uploadErrors" :key="`u${i}`" :message="msg" />
             <InputError v-for="(msg, i) in refErrors" :key="i" :message="msg" />
         </div>
 
@@ -298,7 +360,7 @@ const selectClass =
                     </p>
                     <InputError v-else class="mt-2" :message="form.errors.credits" />
                 </div>
-                <Button type="submit" size="lg" :disabled="form.processing || !options || !form.prompt.trim() || cannotAfford">
+                <Button type="submit" size="lg" :disabled="form.processing || uploading > 0 || !options || !form.prompt.trim() || cannotAfford">
                     <Loader2 v-if="form.processing" class="animate-spin" />
                     Generate
                 </Button>

@@ -2,14 +2,16 @@
 import CreditBalance from '@/components/credits/CreditBalance.vue';
 import GenerationForm from '@/components/generations/GenerationForm.vue';
 import GenerationRow from '@/components/generations/GenerationRow.vue';
+import HistoryPagination from '@/components/generations/HistoryPagination.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import type { BreadcrumbItem, Generation, GenerationDraft, GenerationOptions, SharedData } from '@/types';
+import type { BreadcrumbItem, Generation, GenerationDraft, GenerationOptions, Pagination, SharedData } from '@/types';
 import { Head, usePage, usePoll } from '@inertiajs/vue3';
 import { ImageIcon } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     generations: Generation[];
+    pagination: Pagination;
     options: GenerationOptions | null;
     markupPercent: string;
 }>();
@@ -21,7 +23,7 @@ const flash = computed(() => page.props.flash);
 
 // Live status: refresh only the history (and the balance, as holds settle) every 3s while anything is in flight.
 const inFlight = computed(() => props.generations.some((g) => !g.is_terminal));
-const { start, stop } = usePoll(3000, { only: ['generations', 'credits'] }, { autoStart: false });
+const { start, stop } = usePoll(3000, { only: ['generations', 'pagination', 'credits'] }, { autoStart: false });
 
 watch(inFlight, (active) => (active ? start() : stop()), { immediate: true });
 
@@ -84,10 +86,15 @@ const onReuse = (g: Generation) =>
                 <GenerationForm ref="formRef" :options="options" :markup-percent="markupPercent" />
             </section>
 
-            <section class="space-y-3">
+            <section class="scroll-mt-4 space-y-3">
                 <div class="flex items-baseline justify-between">
                     <h2 class="text-lg font-semibold">History</h2>
-                    <span v-if="inFlight" class="text-xs text-muted-foreground">Updating live…</span>
+                    <span class="flex items-baseline gap-3 text-xs text-muted-foreground">
+                        <span v-if="inFlight">Updating live…</span>
+                        <span v-if="pagination.total > 0" data-testid="history-range">
+                            {{ pagination.from }}–{{ pagination.to }} of {{ pagination.total }}
+                        </span>
+                    </span>
                 </div>
 
                 <div
@@ -99,6 +106,8 @@ const onReuse = (g: Generation) =>
                 </div>
 
                 <GenerationRow v-for="g in generations" :key="g.id" :generation="g" @edit="onEdit" @reuse="onReuse" />
+
+                <HistoryPagination :pagination="pagination" />
             </section>
         </div>
     </AppLayout>

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\GenerationController;
+use App\Http\Controllers\ReferenceImageController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -21,6 +22,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:generations')->name('generations.retry');
     Route::post('generations/estimate', [GenerationController::class, 'estimate'])
         ->middleware('throttle:estimates')->name('generations.estimate');
+
+    // Local reference image → public URL usable as a Pixelforge reference image.
+    Route::post('reference-images', [ReferenceImageController::class, 'store'])
+        ->middleware('throttle:uploads')->name('reference-images.store');
 
     // Fake purchase (no payment): adds a fixed pack of credits.
     Route::post('credits', [CreditController::class, 'store'])

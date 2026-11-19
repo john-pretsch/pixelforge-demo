@@ -150,3 +150,13 @@ export interface GenerationDraft {
     /** Shown above the form, e.g. the "charged as a new image" note. */
     note: { tone: 'info' | 'charge'; text: string } | null;
 }
+
+/** History pager (GenerationController::index). */
+export interface Pagination {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+}

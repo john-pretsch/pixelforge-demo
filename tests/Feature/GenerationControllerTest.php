@@ -63,6 +63,41 @@ class GenerationControllerTest extends TestCase
                 ->where('markupPercent', '25'));
     }
 
+    public function test_history_is_paginated_newest_first(): void
+    {
+        $this->fakePricing();
+        $ids = Generation::factory()->for($this->user)->count(23)->create()->pluck('id')->sortDesc()->values();
+        Generation::factory()->count(5)->create(); // someone else's: not counted
+
+        $this->actingAs($this->user)->get('/generations')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('generations', 10)
+                ->where('generations.0.id', $ids[0])
+                ->where('pagination', ['current_page' => 1, 'last_page' => 3, 'per_page' => 10, 'total' => 23, 'from' => 1, 'to' => 10]));
+
+        $this->actingAs($this->user)->get('/generations?page=3')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('generations', 3)
+                ->where('generations.0.id', $ids[20])
+                ->where('generations.2.id', $ids[22])
+                ->where('pagination.current_page', 3)
+                ->where('pagination.from', 21));
+
+        $this->actingAs($this->user)->get('/generations?page=9')->assertRedirect('/generations?page=3');
+    }
+
+    public function test_empty_history_has_one_page(): void
+    {
+        $this->fakePricing();
+
+        $this->actingAs($this->user)->get('/generations')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('generations', 0)
+                ->where('pagination.last_page', 1)
+                ->where('pagination.total', 0));
+    }
+
     public function test_pending_generation_waiting_for_capacity_is_labelled(): void
     {
         $this->fakePricing();

@@ -37,6 +37,7 @@ class AppServiceProvider extends ServiceProvider
         // Operators: the profit report. Granted with `php artisan pixelforge:make-admin`.
         Gate::define('admin', fn (User $user) => $user->is_admin);
 
+        RateLimiter::for('uploads', fn (Request $request) => Limit::perMinute(20)->by($request->user()?->id ?: $request->ip()));
         RateLimiter::for('estimates', fn (Request $request) => Limit::perMinute(120)->by($request->user()?->id ?: $request->ip()));
     }
 }

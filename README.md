@@ -2,6 +2,10 @@
 
 ## What is it
 A Laravel 12 + Vue 3 + Inertia app that generates images through **Pixelforge**, a simulated asynchronous image API. Users see an estimated price before they submit and get live status updates. 
+App:
+https://pixelforge-demo.johnpretsch.com
+Repo:
+
 
 ## How was it built
 
@@ -15,6 +19,9 @@ The code was generated using both planning mode, manual mode and automatic mode.
 ## Design considerations
 
 - Allow iteration. Retry with this image includes the image and previous prompt as inputs for another try.
+- Reference images from url or local upload
+- Nice response Vue front end.
+- Sign up/login streamlined. No 2fa, forgot password ect.
 
 ## Now What?
 
