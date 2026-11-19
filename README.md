@@ -1,0 +1,87 @@
+# Pixelforge Studio
+
+## What is it
+A Laravel 12 + Vue 3 + Inertia app that generates images through **Pixelforge**, a simulated asynchronous image API. Users see an estimated price before they submit and get live status updates. 
+
+## How was it built
+
+This was generated using Claude Code / Opus 5.5. The API docs and Assessment doc were used as part of the prompting:
+
+https://pixelforge.promptedit.dev/assessment
+https://pixelforge.promptedit.dev/docs
+
+The code was generated using both planning mode, manual mode and automatic mode. Git diff was used to view the generated addions and changes. This allowed some granularity in the commit history. Normally I would squash some of the commits before pushing, but in this case I'll leave them as is for transparency.
+
+## Now What?
+
+At first glance the code looks ok and the basic functionality works, but that is usually the case with generated code. The tricky part is going from this to an application that can be submitted with confidence. 
+
+### Static Analysis
+
+Let's start with some low hanging fruit and run some static analysis on the generated code. This will catch syntax and other 
+
+- **Larastan (level 6):** 10 issues, all in the generated code. Most were missing type annotations; there was also one redundant `array_values()` call. The fixes change no behaviour. It now reports 0 errors with no baseline.
+- **ESLint:** came with the starter kit and reported 0 problems.
+
+```bash
+composer analyse      # Larastan
+npm run lint:check    # ESLint (report only)
+```
+
+### Dependency Verification
+This is an area where both human and AI agents often slip up. npm audit found many issues. The below command fixes non breaking changes. If this was a production app, I would include a thorough analysis of this in my devsec hardening plan.
+
+```bash
+    npm audit fix #fix 
+```
+
+### Integration testing
+
+During the initial build, Claude create a suite of unit test which all passed. This is a tautological loop which is an inherit problem with unit testing whether human or ai generation. I've added a series of tests in order to cover as much as possible automatically.
+
+#### Running the tests
+
+Run these from the project root. On the server, run PHP as `www-data`.
+
+| What | Command | Notes |
+|---|---|---|
+| Unit + Feature | `php artisan test` | 123 tests; Pixelforge is faked; uses the `pixelforge_test` DB |
+| One suite | `php artisan test --testsuite=Unit` | or `Feature` |
+| Filter by name | `php artisan test --filter=Webhook` | class or method name |
+| One file or folder | `php artisan test tests/Unit/Pricing` | |
+| Live API integration | `composer test:integration` | opt-in; real Pixelforge API with a dev key in `.env.e2e`; about 1–2 min |
+| Browser E2E | `npm run build && npm run test:e2e` | opt-in; Playwright on an isolated stack (`127.0.0.1:8001`, own DB, dev key) |
+| One E2E spec | `npx playwright test --grep "estimate"` | |
+| E2E report / trace | `npx playwright show-report` | or `npx playwright show-trace test-results/<test>/trace.zip` |
+| Static analysis (PHP) | `composer analyse` | Larastan level 6 |
+| Lint (Vue/TS) | `npm run lint:check` | report only |
+| PHP code style | `vendor/bin/pint --test` | |
+| Frontend formatting | `npm run format:check` | Prettier |
+
+### Manual Testing
+
+Finally, lets do some checks.
+
+## Stretch goals
+
+Both stretch goals are built.
+
+### Balances
+
+- Every user has a credit balance, shown next to the form. **Buy credits** adds a $5, $10 or $25 pack. This is a demo purchase with no payment, and the server accepts only those packs.
+- Credits are an append-only ledger (`credit_transactions`), and the balance is the exact `SUM` of it:
+  - When you submit, the app **holds** the top of the estimate range.
+  - When the generation finishes, the hold is **released**. On success, the exact price is **debited**. Failed generations cost nothing.
+- Generate is disabled when the estimate's upper bound is more than your balance. The server checks again while holding a lock on the user row, so two tabs can't spend the same credits.
+- Settlement happens in `ApplyProviderState`, in the same locked transaction as the status change. A unique key on (generation, type) stops a duplicate webhook from charging twice.
+
+### Admin report (`/admin/report`)
+
+- For each UTC day and each user, it shows what users were charged, what Pixelforge charged us, and the profit and margin.
+- Days are bucketed by `completed_at`, the same way Pixelforge bills. Each day's provider cost is compared exactly (9dp) with `GET /v1/usage`, and any difference is flagged.
+- Only admins can see it. Grant access with:
+
+```bash
+sudo -u www-data php artisan pixelforge:make-admin you@example.com   # --revoke to remove
+```
+

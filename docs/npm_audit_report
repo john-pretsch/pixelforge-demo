@@ -1,0 +1,107 @@
+# npm audit report
+
+glob  9.0.0 - 14.0.1
+Severity: moderate
+Glob: AbortSignal cancellation bypass allows post-timeout filesystem traversal - https://github.com/advisories/GHSA-3g3m-2fjr-6pw4
+Depends on vulnerable versions of minimatch
+fix available via `npm audit fix`
+node_modules/glob
+  sucrase  3.35.0
+  Depends on vulnerable versions of glob
+  node_modules/sucrase
+
+minimatch  7.0.0 - 11.0.0
+Severity: moderate
+minimatch has potential denial of service via globparts amplification - https://github.com/advisories/GHSA-g3hv-75wg-m249
+fix available via `npm audit fix --force`
+Will install vue-tsc@3.3.14, which is a breaking change
+node_modules/minimatch
+  @typescript-eslint/typescript-estree  6.16.0 - 8.72.2
+  Depends on vulnerable versions of fast-glob
+  Depends on vulnerable versions of minimatch
+  node_modules/@typescript-eslint/typescript-estree
+    @typescript-eslint/parser  6.16.0 - 8.72.2
+    Depends on vulnerable versions of @typescript-eslint/typescript-estree
+    node_modules/@typescript-eslint/parser
+      typescript-eslint  <=8.72.2
+      Depends on vulnerable versions of @typescript-eslint/eslint-plugin
+      Depends on vulnerable versions of @typescript-eslint/parser
+      Depends on vulnerable versions of @typescript-eslint/utils
+      node_modules/typescript-eslint
+    @typescript-eslint/type-utils  6.16.0 - 8.72.2
+    Depends on vulnerable versions of @typescript-eslint/typescript-estree
+    Depends on vulnerable versions of @typescript-eslint/utils
+    node_modules/@typescript-eslint/type-utils
+      @typescript-eslint/eslint-plugin  6.16.0 - 8.72.2
+      Depends on vulnerable versions of @typescript-eslint/type-utils
+      Depends on vulnerable versions of @typescript-eslint/utils
+      node_modules/@typescript-eslint/eslint-plugin
+    @typescript-eslint/utils  6.16.0 - 8.72.2
+    Depends on vulnerable versions of @typescript-eslint/typescript-estree
+    node_modules/@typescript-eslint/utils
+  @vue/language-core  <=3.0.1
+  Depends on vulnerable versions of minimatch
+  node_modules/@vue/language-core
+    vue-tsc  1.7.0-alpha.0 - 3.0.1
+    Depends on vulnerable versions of @vue/language-core
+    node_modules/vue-tsc
+      prettier-plugin-organize-imports  4.0.0 - 4.1.0
+      Depends on vulnerable versions of vue-tsc
+      node_modules/prettier-plugin-organize-imports
+
+picomatch  *
+Severity: high
+picomatch vulnerable to ReDoS through single-branch repeated extglobs - https://github.com/advisories/GHSA-fc5q-39xc-vjpf
+fix available via `npm audit fix --force`
+Will install @vue/eslint-config-typescript@14.0.1, which is a breaking change
+node_modules/picomatch
+node_modules/tinyglobby/node_modules/picomatch
+node_modules/vite/node_modules/picomatch
+  anymatch  >=3.0.0
+  Depends on vulnerable versions of picomatch
+  node_modules/anymatch
+    chokidar  3.0.0 - 3.6.0
+    Depends on vulnerable versions of anymatch
+    Depends on vulnerable versions of readdirp
+    node_modules/chokidar
+      tailwindcss  <=0.0.0-oxide-insiders.ff2c25f || 2.1.0-canary.1 - 3.4.19
+      Depends on vulnerable versions of chokidar
+      Depends on vulnerable versions of fast-glob
+      Depends on vulnerable versions of micromatch
+      node_modules/tailwindcss
+        tailwindcss-animate  *
+        Depends on vulnerable versions of tailwindcss
+        node_modules/tailwindcss-animate
+  fdir  >=5.2.1
+  Depends on vulnerable versions of picomatch
+  node_modules/tinyglobby/node_modules/fdir
+  node_modules/vite/node_modules/fdir
+    vite  >=6.3.0-beta.0
+    Depends on vulnerable versions of fdir
+    Depends on vulnerable versions of picomatch
+    Depends on vulnerable versions of tinyglobby
+    node_modules/vite
+  micromatch  >=4.0.0
+  Depends on vulnerable versions of picomatch
+  node_modules/micromatch
+    fast-glob  >=3.0.0
+    Depends on vulnerable versions of micromatch
+    node_modules/fast-glob
+      @vue/eslint-config-typescript  >=14.1.0
+      Depends on vulnerable versions of fast-glob
+      node_modules/@vue/eslint-config-typescript
+  readdirp  3.0.0 - 3.6.0
+  Depends on vulnerable versions of picomatch
+  node_modules/readdirp
+  tinyglobby  *
+  Depends on vulnerable versions of fdir
+  Depends on vulnerable versions of picomatch
+  node_modules/tinyglobby
+  vite-plugin-full-reload  >=0.2.0
+  Depends on vulnerable versions of picomatch
+  node_modules/vite-plugin-full-reload
+    laravel-vite-plugin  >=0.3.0
+    Depends on vulnerable versions of vite-plugin-full-reload
+    node_modules/laravel-vite-plugin
+
+26 vulnerabilities (11 moderate, 15 high)
