@@ -8,7 +8,7 @@ import type { Estimate, GenerationDraft, GenerationOptions, SharedData } from '@
 import { useForm, usePage } from '@inertiajs/vue3';
 import { useDebounceFn } from '@vueuse/core';
 import axios from 'axios';
-import { Loader2, Plus, X } from 'lucide-vue-next';
+import { ImageOff, Loader2, Plus, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -16,14 +16,28 @@ const props = defineProps<{
     markupPercent: string;
 }>();
 
+const MAX_TITLE = 25;
+
 const MAX_PROMPT = 4000;
 const MAX_REFS = 4;
 
 const form = useForm({
+    title: '',
     prompt: '',
     size: props.options?.sizes[0] ?? '1024x1024',
     quality: props.options?.qualities.includes('medium') ? 'medium' : (props.options?.qualities[0] ?? 'medium'),
     reference_images: [] as string[],
+});
+
+// Preview of the server's default (Generation::titleFromPrompt): first five words, cut to 25 with "…".
+const defaultTitle = computed(() => {
+    const title = form.prompt.trim().split(/\s+/).filter(Boolean).slice(0, 5).join(' ');
+    return [...title].length > MAX_TITLE
+        ? [...title]
+              .slice(0, MAX_TITLE - 1)
+              .join('')
+              .trimEnd() + '…'
+        : title;
 });
 
 const estimate = ref<Estimate | null>(null);
@@ -60,6 +74,22 @@ const fetchEstimate = useDebounceFn(async () => {
 
 watch(() => [form.prompt, form.size, form.quality, filledRefs.value.length], fetchEstimate, { immediate: true });
 
+// Thumbnails for the reference image URLs, numbered to match their input. A URL that fails to load
+// (typo, expired link, not an image) shows a "No preview" tile; that's a hint only, the server still validates.
+const previews = computed(() =>
+    form.reference_images
+        .map((url, index) => ({ url: url.trim(), index }))
+        .filter((p) => {
+            try {
+                return ['http:', 'https:'].includes(new URL(p.url).protocol);
+            } catch {
+                return false;
+            }
+        }),
+);
+const brokenPreviews = ref(new Set<string>());
+const markBroken = (url: string) => (brokenPreviews.value = new Set(brokenPreviews.value).add(url));
+
 const addRef = () => form.reference_images.length < MAX_REFS && form.reference_images.push('');
 const removeRef = (i: number) => form.reference_images.splice(i, 1);
 
@@ -95,6 +125,7 @@ const promptEl = ref<HTMLTextAreaElement | null>(null);
 
 const load = (draft: GenerationDraft) => {
     form.clearErrors();
+    form.title = draft.title ?? '';
     form.prompt = draft.prompt;
     if (props.options?.sizes.includes(draft.size)) form.size = draft.size;
     if (props.options?.qualities.includes(draft.quality)) form.quality = draft.quality;
@@ -112,7 +143,7 @@ const submit = () => {
         onSuccess: () => {
             truncatedBy.value = 0;
             draftNote.value = null;
-            form.reset('prompt', 'reference_images');
+            form.reset('title', 'prompt', 'reference_images');
         },
     });
 };
@@ -136,6 +167,24 @@ const selectClass =
         >
             <p class="flex-1">{{ draftNote.text }}</p>
             <button type="button" class="opacity-70 hover:opacity-100" aria-label="Dismiss" @click="draftNote = null"><X class="size-4" /></button>
+        </div>
+
+        <div class="grid gap-2">
+            <div class="flex items-baseline justify-between">
+                <Label for="title">Title</Label>
+                <span class="text-xs text-muted-foreground">{{ form.title.length }} / {{ MAX_TITLE }}</span>
+            </div>
+            <Input
+                id="title"
+                v-model="form.title"
+                :maxlength="MAX_TITLE"
+                :placeholder="defaultTitle || 'Optional: defaults to the first five words of the prompt'"
+                autocomplete="off"
+            />
+            <p class="text-xs text-muted-foreground">
+                Optional, just for your history. Leave it blank to use the first five words of the prompt. It isn't sent to Pixelforge.
+            </p>
+            <InputError :message="form.errors.title" />
         </div>
 
         <div class="grid gap-2">
@@ -190,6 +239,32 @@ const selectClass =
                 <Button type="button" variant="ghost" size="icon" :aria-label="`Remove reference image ${i + 1}`" @click="removeRef(i)">
                     <X />
                 </Button>
+            </div>
+            <div v-if="previews.length" class="flex flex-wrap gap-2" data-testid="reference-thumbnails">
+                <a
+                    v-for="p in previews"
+                    :key="`${p.index}-${p.url}`"
+                    :href="p.url"
+                    target="_blank"
+                    rel="noopener"
+                    class="relative flex size-20 items-center justify-center overflow-hidden rounded-md border bg-muted"
+                    :title="p.url"
+                >
+                    <img
+                        v-if="!brokenPreviews.has(p.url)"
+                        :src="p.url"
+                        :alt="`Reference image ${p.index + 1}`"
+                        class="size-full object-cover"
+                        loading="lazy"
+                        referrerpolicy="no-referrer"
+                        @error="markBroken(p.url)"
+                    />
+                    <span v-else class="flex flex-col items-center gap-1 p-1 text-center text-[10px] leading-tight text-muted-foreground">
+                        <ImageOff class="size-4" />
+                        No preview
+                    </span>
+                    <span class="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] font-medium text-white">{{ p.index + 1 }}</span>
+                </a>
             </div>
             <div>
                 <Button v-if="form.reference_images.length < MAX_REFS" type="button" variant="outline" size="sm" @click="addRef">

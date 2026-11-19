@@ -30,6 +30,7 @@ class GenerationResource extends JsonResource
                 GenerationStatus::Failed => 'Failed',
             },
             'is_terminal' => $status->isTerminal(),
+            'title' => $this->title,
             'prompt' => $this->prompt,
             'size' => $this->size,
             'quality' => $this->quality,

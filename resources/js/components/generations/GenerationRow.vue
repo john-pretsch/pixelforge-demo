@@ -69,7 +69,10 @@ const created = computed(() => new Date(props.generation.created_at).toLocaleStr
                 <span class="ml-auto text-xs text-muted-foreground">{{ created }}</span>
             </div>
 
-            <p class="line-clamp-3 text-sm">{{ generation.prompt }}</p>
+            <h3 class="truncate font-medium" :class="{ 'italic text-muted-foreground': !generation.title }" data-testid="generation-title">
+                {{ generation.title ?? 'Untitled' }}
+            </h3>
+            <p class="line-clamp-3 text-sm text-muted-foreground">{{ generation.prompt }}</p>
 
             <p v-if="generation.notice" class="text-xs text-amber-700 dark:text-amber-400">{{ generation.notice }}</p>
             <p v-if="generation.error" class="text-xs text-red-600 dark:text-red-400">{{ generation.error.message }}</p>

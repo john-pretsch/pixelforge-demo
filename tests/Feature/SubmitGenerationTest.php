@@ -39,7 +39,9 @@ class SubmitGenerationTest extends TestCase
             && $r->header('Authorization') === ['Bearer pf_test_key']
             && $r['metadata'] === ['local_id' => $this->generation->uuid]
             && $r['reference_images'] === ['https://example.com/ref.png']
-            && $r['prompt'] === $this->generation->prompt);
+            && $r['prompt'] === $this->generation->prompt
+            // The title is our label only: never part of what Pixelforge sees.
+            && ! array_key_exists('title', $r->data()));
 
         $g = $this->generation->fresh();
         $this->assertSame(GenerationStatus::Queued, $g->status);

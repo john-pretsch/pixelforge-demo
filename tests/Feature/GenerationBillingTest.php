@@ -175,7 +175,10 @@ class GenerationBillingTest extends TestCase
         $this->assertNotSame($original->id, $retry->id);
         $this->assertNotSame($original->uuid, $retry->uuid); // new Idempotency-Key
         $this->assertSame(GenerationStatus::Pending, $retry->status);
-        $this->assertSame([$original->prompt, $original->size, $original->quality], [$retry->prompt, $retry->size, $retry->quality]);
+        $this->assertSame(
+            [$original->title, $original->prompt, $original->size, $original->quality],
+            [$retry->title, $retry->prompt, $retry->size, $retry->quality],
+        );
         // The original stays failed and released; only the retry holds credits.
         $this->assertSame(GenerationStatus::Failed, $original->fresh()->status);
         $this->assertSame(Money::toStorage(Money::of('1')->minus($retry->estimated_price_max)), $this->balance($user));
@@ -230,7 +233,7 @@ class GenerationBillingTest extends TestCase
     /** @return array<string, string> */
     private function input(): array
     {
-        return ['prompt' => self::PROMPT, 'size' => '1024x1024', 'quality' => 'low'];
+        return ['title' => 'Red cube', 'prompt' => self::PROMPT, 'size' => '1024x1024', 'quality' => 'low'];
     }
 
     private function balance(User $user): string

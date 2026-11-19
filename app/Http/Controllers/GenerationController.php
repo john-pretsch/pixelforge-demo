@@ -64,6 +64,7 @@ class GenerationController extends Controller
 
         try {
             $create->handle($request->user(), [
+                'title' => $generation->title,
                 'prompt' => $generation->prompt,
                 'size' => $generation->size,
                 'quality' => $generation->quality,

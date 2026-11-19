@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Generation;
 use App\Pixelforge\PixelforgeClient;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -15,6 +16,9 @@ use Illuminate\Validation\Rule;
 class GenerationRequest extends FormRequest
 {
     public const MAX_PROMPT = 4000;
+
+    /** Our own label for the generation; not part of the prompt, never sent to Pixelforge. */
+    public const MAX_TITLE = Generation::MAX_TITLE;
 
     public const MAX_REFERENCE_IMAGES = 4;
 
@@ -40,6 +44,8 @@ class GenerationRequest extends FormRequest
         $isEstimate = $this->routeIs('generations.estimate');
 
         return [
+            // Optional: CreateGeneration defaults it to the prompt's first five words.
+            'title' => ['nullable', 'string', 'max:'.self::MAX_TITLE],
             'prompt' => [$isEstimate ? 'nullable' : 'required', 'string', 'max:'.self::MAX_PROMPT],
             'size' => ['required', Rule::in($pricing->sizes())],
             'quality' => ['required', Rule::in($pricing->qualities())],

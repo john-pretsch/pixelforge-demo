@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
  * App\Actions\Generations\ApplyProviderState.
  *
  * @property GenerationStatus $status
+ * @property string|null $title Our label only; never sent to Pixelforge.
  * @property string $estimated_price_min
  * @property string $estimated_price_max
  * @property string|null $provider_cost
@@ -90,6 +91,23 @@ class Generation extends Model
     public function canRetry(): bool
     {
         return $this->status === GenerationStatus::Failed && PixelforgeException::isRetryableCode($this->error_code);
+    }
+
+    /** Max title length (matches the column and the form). */
+    public const MAX_TITLE = 25;
+
+    /**
+     * Default title when the user gives none: the prompt's first five words,
+     * cut to fit the 25-character column with an ellipsis.
+     */
+    public static function titleFromPrompt(string $prompt): string
+    {
+        $words = preg_split('/\s+/u', trim($prompt), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $title = implode(' ', array_slice($words, 0, 5));
+
+        return mb_strlen($title) > self::MAX_TITLE
+            ? rtrim(mb_substr($title, 0, self::MAX_TITLE - 1)).'…'
+            : $title;
     }
 
     /** @param Builder<self> $query */

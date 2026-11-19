@@ -7,6 +7,7 @@ const estimateBox = (page: Page) => page.getByTestId('estimate');
 
 async function submit(page: Page, prompt: string) {
     await page.goto('/generations');
+    await page.locator('#title').fill('E2E');
     await page.locator('#prompt').fill(prompt);
     await page.locator('#quality').selectOption('low');
     await page.getByRole('button', { name: 'Generate' }).click();

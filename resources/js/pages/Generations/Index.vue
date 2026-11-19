@@ -35,6 +35,7 @@ const loadDraft = (draft: GenerationDraft) => {
 
 const onEdit = (g: Generation) =>
     loadDraft({
+        title: g.title,
         prompt: g.prompt,
         size: g.size,
         quality: g.quality,
@@ -44,6 +45,7 @@ const onEdit = (g: Generation) =>
 
 const onReuse = (g: Generation) =>
     loadDraft({
+        title: g.title,
         prompt: g.prompt,
         size: g.size,
         quality: g.quality,

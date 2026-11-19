@@ -26,7 +26,7 @@ class CreateGeneration
     public function __construct(private readonly PixelforgeClient $client) {}
 
     /**
-     * @param  array{prompt: string, size: string, quality: string, reference_images?: list<string>|null}  $input
+     * @param  array{title?: string|null, prompt: string, size: string, quality: string, reference_images?: list<string>|null}  $input
      *
      * @throws InsufficientCredits
      */
@@ -48,6 +48,8 @@ class CreateGeneration
                 'uuid' => (string) Str::uuid(),
                 'user_id' => $user->id,
                 'status' => GenerationStatus::Pending,
+                // No title given: default to the prompt's first five words.
+                'title' => filled($input['title'] ?? null) ? $input['title'] : Generation::titleFromPrompt($input['prompt']),
                 'prompt' => $input['prompt'],
                 'size' => $input['size'],
                 'quality' => $input['quality'],

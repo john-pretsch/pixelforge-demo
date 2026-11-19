@@ -113,6 +113,7 @@ class GenerationControllerTest extends TestCase
         Queue::fake();
 
         $this->actingAs($this->user)->post('/generations', [
+            'title' => 'Red cube',
             'prompt' => '[succeed] a red cube on a white table',
             'size' => '1024x1024',
             'quality' => 'low',
@@ -121,6 +122,7 @@ class GenerationControllerTest extends TestCase
 
         $g = Generation::sole();
         $this->assertSame($this->user->id, $g->user_id);
+        $this->assertSame('Red cube', $g->title);
         $this->assertSame(GenerationStatus::Pending, $g->status);
         $this->assertSame(['https://example.com/a.png'], $g->reference_images);
         $this->assertSame('1.2500', $g->markup);
@@ -132,17 +134,47 @@ class GenerationControllerTest extends TestCase
         Queue::assertPushed(SubmitGeneration::class, fn ($job) => $job->generationId === $g->id);
     }
 
+    public function test_missing_title_defaults_to_the_first_five_words_of_the_prompt(): void
+    {
+        $this->fakePricing();
+        Queue::fake();
+
+        foreach (['', '   ', null] as $blank) {
+            $this->actingAs($this->user)->post('/generations', [
+                'title' => $blank, 'prompt' => '  a cat  on a  red mat at dawn', 'size' => '1024x1024', 'quality' => 'low',
+            ])->assertSessionHasNoErrors();
+        }
+
+        $this->assertSame(['a cat on a red'], Generation::pluck('title')->unique()->values()->all());
+        $this->assertSame('a cat  on a  red mat at dawn', Generation::first()->prompt); // only trimmed (Laravel's TrimStrings), otherwise untouched
+    }
+
+    public function test_given_title_is_kept_and_is_not_part_of_the_prompt(): void
+    {
+        $this->fakePricing();
+        Queue::fake();
+
+        $this->actingAs($this->user)->post('/generations', [
+            'title' => str_repeat('t', 25), 'prompt' => 'a cat', 'size' => '1024x1024', 'quality' => 'low',
+        ])->assertSessionHasNoErrors();
+
+        $g = Generation::sole();
+        $this->assertSame(str_repeat('t', 25), $g->title);
+        $this->assertSame('a cat', $g->prompt);
+    }
+
     public function test_store_validates_input_against_pixelforge_limits(): void
     {
         $this->fakePricing();
         Queue::fake();
 
         $this->actingAs($this->user)->post('/generations', [
+            'title' => str_repeat('t', 26),
             'prompt' => str_repeat('a', 4001),
             'size' => '512x512',
             'quality' => 'ultra',
             'reference_images' => ['ftp://x', 'https://a.test/1', 'https://a.test/2', 'https://a.test/3', 'https://a.test/4'],
-        ])->assertSessionHasErrors(['prompt', 'size', 'quality', 'reference_images', 'reference_images.0']);
+        ])->assertSessionHasErrors(['title', 'prompt', 'size', 'quality', 'reference_images', 'reference_images.0']);
 
         $this->assertSame(0, Generation::count());
         Queue::assertNothingPushed();
@@ -154,11 +186,11 @@ class GenerationControllerTest extends TestCase
         Http::fake(['https://pixelforge.test/v1/pricing' => Http::response(['error' => ['code' => 'overloaded', 'message' => 'busy']], 503)]);
 
         $this->actingAs($this->user)->from('/generations')->post('/generations', [
-            'prompt' => 'a cat', 'size' => '1024x1024', 'quality' => 'low',
+            'title' => 'Cat', 'prompt' => 'a cat', 'size' => '1024x1024', 'quality' => 'low',
         ])->assertRedirect('/generations')->assertSessionHas('error');
 
         $this->actingAs($this->user)->postJson('/generations/estimate', [
-            'prompt' => 'a cat', 'size' => '1024x1024', 'quality' => 'low',
+            'title' => 'Cat', 'prompt' => 'a cat', 'size' => '1024x1024', 'quality' => 'low',
         ])->assertStatus(503);
 
         $this->assertSame(0, Generation::count());

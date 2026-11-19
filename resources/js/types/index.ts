@@ -59,6 +59,8 @@ export interface Generation {
     status: GenerationStatus;
     status_label: string;
     is_terminal: boolean;
+    /** Our label only; null for generations created before titles existed. */
+    title: string | null;
     prompt: string;
     size: string;
     quality: string;
@@ -140,6 +142,7 @@ export interface ProfitReport {
 
 /** Form contents loaded from a history item (Edit / Retry with this image). Nothing is submitted until Generate. */
 export interface GenerationDraft {
+    title: string | null;
     prompt: string;
     size: string;
     quality: string;

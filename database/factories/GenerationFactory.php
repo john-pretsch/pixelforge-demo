@@ -19,6 +19,7 @@ class GenerationFactory extends Factory
             'uuid' => (string) Str::uuid(),
             'user_id' => User::factory(),
             'status' => GenerationStatus::Pending,
+            'title' => 'Red cube',
             'prompt' => '[succeed] a red cube on a white table',
             'size' => '1024x1024',
             'quality' => 'low',

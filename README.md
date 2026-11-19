@@ -10,7 +10,11 @@ This was generated using Claude Code / Opus 5.5. The API docs and Assessment doc
 https://pixelforge.promptedit.dev/assessment
 https://pixelforge.promptedit.dev/docs
 
-The code was generated using both planning mode, manual mode and automatic mode. Git diff was used to view the generated addions and changes. This allowed some granularity in the commit history. Normally I would squash some of the commits before pushing, but in this case I'll leave them as is for transparency.
+The code was generated using both planning mode, manual mode and automatic mode. Git diff was used to view the generated addions and changes. This allowed some granularity in the commit history. Normally I would squash some of the commits before pushing, but in this case I'll leave them as is for transparency. Additional feature were added after testing.
+
+## Design considerations
+
+- Allow iteration. Retry with this image includes the image and previous prompt as inputs for another try.
 
 ## Now What?
 
@@ -73,6 +77,10 @@ Finally, lets do some manual checks.
 - Blocked: blocked by content policy, so no further action. 
 - Overloaded: add a retry button since there is presumably nothing wrong with the content.
 - Fail: can retry if desired. 
+- Slow: works as normal from the users point of view
+- Duplicate: (test idempotency key). Should appear to work as normal. Check dashboard
+- Succeed: the normal path.
+
 ## Stretch goals
 
 Both stretch goals are built.
